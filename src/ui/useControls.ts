@@ -32,7 +32,7 @@ export function useControls(): void {
     let tracking = false;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.code === DEBUG.TOGGLE_KEY) {
+      if (import.meta.env.DEV && event.code === DEBUG.TOGGLE_KEY) {
         if (!event.repeat) toggleDebug();
         return;
       }

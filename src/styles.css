@@ -808,3 +808,41 @@ button {
   top: calc(env(safe-area-inset-top) + 12px);
   left: calc(env(safe-area-inset-left) + 16px);
 }
+
+/* ---------- Short landscape screens (phones on their side) ---------- */
+
+@media (max-height: 520px) and (orientation: landscape) {
+  /* The title sits in the top bar, between the corner controls. */
+  .landing-title {
+    top: calc(env(safe-area-inset-top) + 14px);
+    padding: 0 200px;
+    font-size: clamp(22px, 7vh, 40px);
+  }
+
+  .play-button {
+    width: 120px;
+    height: 120px;
+    margin: -60px 0 0 -60px;
+    font-size: 30px;
+  }
+
+  .loading-bar {
+    top: calc(50% + 84px);
+  }
+
+  .landing-character {
+    width: clamp(64px, 22vh, 110px);
+  }
+
+  .landing-character.slot-4 {
+    margin-left: calc(clamp(64px, 22vh, 110px) / -2);
+  }
+
+  .select-screen .screen-heading {
+    font-size: 26px;
+  }
+
+  .select-bar {
+    margin-bottom: 8px;
+  }
+}

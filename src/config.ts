@@ -226,6 +226,11 @@ export const CAMERA = {
   FOLLOW_X_FACTOR: 0.3,
   /** How fast the camera eases sideways, per second (tuning value). */
   FOLLOW_RATE: 8,
+  /**
+   * In portrait the view widens until it is at least this many degrees across,
+   * so all three lanes always fit. Landscape keeps FOV unchanged.
+   */
+  MIN_HORIZONTAL_FOV: 52,
 } as const;
 
 /** A2. Input. */
@@ -319,6 +324,8 @@ export const SAVE = {
 export const RENDER = {
   /** Device pixel ratio range; capped at 2 to keep iPads at 60 fps. */
   DPR: [1, 2],
+  /** If the frame rate drops, the pixel ratio steps down by this much (and back up when it recovers). */
+  DPR_STEP: 0.25,
   SKY_COLOR: '#bfe3ff',
   GROUND_COLOR: '#f7d6e6',
   /** Grey-box lane stripes: width of each stripe inside its 2 m lane. */
@@ -549,6 +556,10 @@ export const VALLEY = {
   /** Scenery stays at least 5 m from the centre line (asset spec). */
   SCENERY_MIN_X: 5.5,
   SCENERY_MAX_X: 13,
+  /** Landscape screens see further to the sides: a second band of scenery out there. */
+  FAR_SCENERY_PER_CHUNK: 8,
+  FAR_SCENERY_MIN_X: 15,
+  FAR_SCENERY_MAX_X: 32,
   SCENERY_MIN_SCALE: 0.8,
   SCENERY_MAX_SCALE: 1.3,
   /** Grass on each side of the path, beyond the 10 m ground chunk. */

@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import { Color, Fog, Vector3, type DirectionalLight, type HemisphereLight } from 'three';
+import { Color, Fog, MathUtils, Vector3, type DirectionalLight, type HemisphereLight, type PerspectiveCamera } from 'three';
 import { CAMERA, EFFECTS, LIGHTING, NIGHT, RENDER, SCREENS } from '../config';
 import type { Screen } from '../game/machine';
 import { frameDt } from '../game/run';
@@ -58,7 +58,9 @@ export function Director() {
   useFrame(({ camera }, delta) => {
     const dt = frameDt(delta);
     const { session } = useGameStore.getState();
-    const step = dt / SCREENS.TRANSITION_TIME;
+    // Screen transitions follow real time, not the clamped simulation step, so they
+    // still take 0.8 s on a device that is running slowly.
+    const step = Math.min(delta, SCREENS.TRANSITION_TIME) / SCREENS.TRANSITION_TIME;
     if (session.screen !== 'SHOP') sceneScreen.current = session.screen;
     const screen = sceneScreen.current;
 
@@ -102,6 +104,17 @@ export function Director() {
     }
     blend.current = Math.min(1, blend.current + step);
     const s = smoothstep(blend.current);
+    // Portrait: widen the view just enough to keep the lanes in frame. Landscape keeps the normal FOV.
+    const lens = camera as PerspectiveCamera;
+    const minVertical = MathUtils.radToDeg(
+      2 * Math.atan(Math.tan(MathUtils.degToRad(CAMERA.MIN_HORIZONTAL_FOV) / 2) / lens.aspect),
+    );
+    const fov = Math.max(CAMERA.FOV, minVertical);
+    if (Math.abs(lens.fov - fov) > 0.01) {
+      lens.fov = fov;
+      lens.updateProjectionMatrix();
+    }
+
     camera.position.lerpVectors(v.fromPosition, v.targetPosition, s);
     v.look.lerpVectors(v.fromLook, v.targetLook, s);
     camera.lookAt(v.look);

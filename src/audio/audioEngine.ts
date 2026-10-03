@@ -1,5 +1,5 @@
 import { AUDIO } from '../config';
-import { ALL_AUDIO, MUSIC_FILES, SOUND_FILES, type Sound, type Track } from './audioManifest';
+import { MUSIC_FILES, SOUND_FILES, type Sound, type Track } from './audioManifest';
 
 type AudioContextClass = typeof AudioContext;
 
@@ -24,9 +24,13 @@ class AudioEngine {
   /** Sounds played, for tests in development. */
   played = 0;
 
-  /** Starts downloading every file (no sound is made). */
-  prefetch(): void {
-    for (const path of ALL_AUDIO) {
+  /**
+   * Starts downloading files (no sound is made). Sound effects download at
+   * startup; the larger music files only after the first tap, to keep the
+   * first load small.
+   */
+  prefetch(paths: readonly string[] = Object.values(SOUND_FILES)): void {
+    for (const path of paths) {
       if (this.fetched.has(path)) continue;
       this.fetched.set(path, this.fetchOne(path));
     }
@@ -73,6 +77,7 @@ class AudioEngine {
     silence.start();
     void context.resume().catch(() => {});
     this.prefetch();
+    this.prefetch(Object.values(MUSIC_FILES));
     void this.decodeAll();
   }
 

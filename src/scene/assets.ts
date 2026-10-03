@@ -1,8 +1,9 @@
 import type { Group, Object3D } from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { MODELS } from '../config';
 import { useAssetStore } from '../store/assetStore';
-import { ALL_MODELS } from './assetManifest';
+import { ACCESSORY_MODELS, ALL_MODELS } from './assetManifest';
 
 /**
  * Loads every model once at startup, behind the Landing screen's loading bar.
@@ -14,9 +15,12 @@ import { ALL_MODELS } from './assetManifest';
  * game uses its grey-box placeholder, with a warning in the console.
  */
 const models = new Map<string, GLTF | null>();
+const pending = new Map<string, Promise<GLTF | null>>();
+// Models compressed with `npm run optimize:models` use meshopt; WebP textures need nothing extra.
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 const GLB_MAGIC = 0x46546c67; // "glTF", little-endian
 
-async function loadOne(loader: GLTFLoader, path: string): Promise<GLTF | null> {
+async function loadOne(path: string): Promise<GLTF | null> {
   const url = `${import.meta.env.BASE_URL}${path}`;
   try {
     const response = await fetch(url);
@@ -30,19 +34,46 @@ async function loadOne(loader: GLTFLoader, path: string): Promise<GLTF | null> {
   }
 }
 
+/** Loads one model (once); getModel() returns it when done. Used for models not needed at startup. */
+export function requestModel(path: string): Promise<GLTF | null> {
+  let promise = pending.get(path);
+  if (!promise) {
+    promise = loadOne(path).then((gltf) => {
+      models.set(path, gltf);
+      return gltf;
+    });
+    pending.set(path, promise);
+  }
+  return promise;
+}
+
+/** Whether a model has finished loading (or been found missing). */
+export function isSettled(path: string): boolean {
+  return models.has(path);
+}
+
+/**
+ * What the first load needs: everything except the accessories, apart from
+ * the one being worn. The other accessories load when the shop opens.
+ */
+export function startupModels(equippedAccessory: string | null): string[] {
+  const accessories = new Set(Object.values(ACCESSORY_MODELS));
+  const worn = equippedAccessory ? ACCESSORY_MODELS[equippedAccessory] : undefined;
+  return ALL_MODELS.filter((path) => !accessories.has(path) || path === worn);
+}
+
 let started: Promise<void> | null = null;
 
 /** Starts loading (once). The asset store reports progress and completion. */
 export function loadAllModels(paths: readonly string[] = ALL_MODELS): Promise<void> {
   if (started) return started;
   const { setProgress, finish } = useAssetStore.getState();
-  const loader = new GLTFLoader();
   let loaded = 0;
   setProgress(0, paths.length);
   const queue = [...paths];
   const worker = async () => {
     for (let path = queue.shift(); path !== undefined; path = queue.shift()) {
-      models.set(path, await loadOne(loader, path));
+      await requestModel(path);
       setProgress(++loaded, paths.length);
     }
   };

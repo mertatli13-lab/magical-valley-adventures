@@ -17,4 +17,7 @@ React Three Fiber, drei, Zustand, Vitest. No physics engine.
 
 - `npm run dev`: dev server, also reachable from an iPad on the same network (`--host`).
 - `npm run test`: unit tests (Vitest).
-- `npm run build`: type check and production build.
+- `npm run build`: type check and production build (base path `/magical-valley-adventures/`).
+- `npm run size`: checks the first load in `dist/` stays under 15 MB.
+- `npm run optimize:models`: compresses Blender exports from `art/models/` into `public/models/`.
+- Pushing to `main` deploys to GitHub Pages (`.github/workflows/deploy.yml`).

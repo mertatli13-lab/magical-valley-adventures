@@ -19,7 +19,7 @@ import { ACCESSORIES } from '../game/catalogue';
 import { frameDt } from '../game/run';
 import { makeAccessoryPlaceholder } from './accessoryShapes';
 import { ACCESSORY_MODELS } from './assetManifest';
-import { getModel } from './assets';
+import { getModel, isSettled, requestModel } from './assets';
 
 const lockedMaterial = new MeshStandardMaterial({ color: CHARACTER_POSES.LOCKED_COLOR });
 const warnedMissingClips = new Set<string>();
@@ -82,7 +82,11 @@ export function CharacterModel({ gltf, name, frame, onClip }: Props) {
 
   const current = useRef<ClipName | null>(null);
   const dark = useRef(false);
-  const accessory = useRef<{ id: string | null; object: Object3D | null }>({ id: null, object: null });
+  const accessory = useRef<{ id: string | null; object: Object3D | null; waitingFor: string | null }>({
+    id: null,
+    object: null,
+    waitingFor: null,
+  });
 
   useEffect(() => () => void mixer.stopAllAction(), [mixer]);
 
@@ -114,13 +118,20 @@ export function CharacterModel({ gltf, name, frame, onClip }: Props) {
       });
     }
 
-    // Accessory on its named empty, or on top of the model if the empty is missing.
-    if (state.accessory !== accessory.current.id) {
+    // Accessory on its named empty, or on top of the model if the empty is missing. Accessory
+    // models load on demand: the placeholder shows until the model arrives, then it is swapped in.
+    const waiting = accessory.current.waitingFor;
+    if (state.accessory !== accessory.current.id || (waiting !== null && isSettled(waiting))) {
       accessory.current.object?.removeFromParent();
-      accessory.current = { id: state.accessory, object: null };
+      accessory.current = { id: state.accessory, object: null, waitingFor: null };
       const item = ACCESSORIES.find((a) => a.id === state.accessory);
       if (item) {
-        const model = getModel(ACCESSORY_MODELS[item.id] ?? '');
+        const path = ACCESSORY_MODELS[item.id] ?? '';
+        if (!isSettled(path)) {
+          void requestModel(path);
+          accessory.current.waitingFor = path;
+        }
+        const model = getModel(path);
         const object = model ? cloneSkinned(model.scene) : makeAccessoryPlaceholder(item.id);
         const empty = root.getObjectByName(item.attach);
         if (empty) empty.add(object);

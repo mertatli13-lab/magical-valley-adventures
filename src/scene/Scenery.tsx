@@ -26,6 +26,8 @@ interface Placement {
   z: number;
   scale: number;
   turn: number;
+  /** In the outer band, only shown on landscape screens. */
+  far: boolean;
 }
 
 /** Pastel placeholder scenery: trees, mushrooms and flower clumps in a few colours. */
@@ -75,20 +77,27 @@ export function Scenery() {
   const { models, layout } = useMemo(() => {
     const loaded = SCENERY_MODELS.map(getModel).filter((m) => m !== null);
     const roots = loaded.length ? loaded.map((gltf) => gltf.scene) : placeholderVariants();
-    const capacity = POOLS.GROUND_CHUNKS * VALLEY.SCENERY_PER_CHUNK;
+    const perChunk = VALLEY.SCENERY_PER_CHUNK + VALLEY.FAR_SCENERY_PER_CHUNK;
+    const capacity = POOLS.GROUND_CHUNKS * perChunk;
     const models = roots.map((root) => new InstancedModel(root, capacity));
     const layout: Placement[][] = Array.from({ length: POOLS.GROUND_CHUNKS }, (_, chunk) => {
       const random = new Random(VALLEY.SEED + chunk);
-      return Array.from({ length: VALLEY.SCENERY_PER_CHUNK }, (_, slot) => {
-        const side = slot % 2 === 0 ? -1 : 1;
-        return {
-          variant: random.int(models.length),
-          x: side * (VALLEY.SCENERY_MIN_X + random.next() * (VALLEY.SCENERY_MAX_X - VALLEY.SCENERY_MIN_X)),
-          z: -GROUND.CHUNK_LENGTH / 2 + ((slot + random.next()) * GROUND.CHUNK_LENGTH) / VALLEY.SCENERY_PER_CHUNK,
-          scale: VALLEY.SCENERY_MIN_SCALE + random.next() * (VALLEY.SCENERY_MAX_SCALE - VALLEY.SCENERY_MIN_SCALE),
-          turn: random.next() * Math.PI * 2,
-        };
-      });
+      const band = (count: number, minX: number, maxX: number, far: boolean): Placement[] =>
+        Array.from({ length: count }, (_, slot) => {
+          const side = slot % 2 === 0 ? -1 : 1;
+          return {
+            variant: random.int(models.length),
+            x: side * (minX + random.next() * (maxX - minX)),
+            z: -GROUND.CHUNK_LENGTH / 2 + ((slot + random.next()) * GROUND.CHUNK_LENGTH) / count,
+            scale: VALLEY.SCENERY_MIN_SCALE + random.next() * (VALLEY.SCENERY_MAX_SCALE - VALLEY.SCENERY_MIN_SCALE),
+            turn: random.next() * Math.PI * 2,
+            far,
+          };
+        });
+      return [
+        ...band(VALLEY.SCENERY_PER_CHUNK, VALLEY.SCENERY_MIN_X, VALLEY.SCENERY_MAX_X, false),
+        ...band(VALLEY.FAR_SCENERY_PER_CHUNK, VALLEY.FAR_SCENERY_MIN_X, VALLEY.FAR_SCENERY_MAX_X, true),
+      ];
     });
     return { models, layout };
   }, []);
@@ -97,13 +106,15 @@ export function Scenery() {
     [],
   );
 
-  useFrame(() => {
+  useFrame(({ size }) => {
     const { chunkZ } = useGameStore.getState().session.run.ground;
+    const landscape = size.width > size.height;
     for (const model of models) model.begin();
     for (let chunk = 0; chunk < layout.length; chunk++) {
       const placements = layout[chunk];
       if (!placements) continue;
       for (const p of placements) {
+        if (p.far && !landscape) continue;
         temp.position.set(p.x, 0, (chunkZ[chunk] ?? 0) + p.z);
         temp.rotation.setFromAxisAngle(temp.up, p.turn);
         temp.scale.setScalar(p.scale);

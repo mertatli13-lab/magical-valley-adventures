@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CHARACTER_COLORS } from '../../config';
 import {
   ACCESSORIES,
@@ -9,6 +9,8 @@ import {
 } from '../../game/catalogue';
 import type { Session } from '../../game/session';
 import { useGameStore, useSession } from '../../store/gameStore';
+import { ACCESSORY_MODELS } from '../../scene/assetManifest';
+import { requestModel } from '../../scene/assets';
 import { ACCESSORY_ICONS, MOVE_ICONS } from '../shopIcons';
 
 const TABS: { kind: ItemKind; label: string }[] = [
@@ -106,6 +108,10 @@ export function Shop() {
   const act = useGameStore((state) => state.act);
   const [tab, setTab] = useState<ItemKind>('character');
   const [pending, setPending] = useState<Item | null>(null);
+  // Accessory models are not part of the first load; fetch them once the shop is open.
+  useEffect(() => {
+    for (const path of Object.values(ACCESSORY_MODELS)) void requestModel(path);
+  }, []);
   if (session.screen !== 'SHOP') return null;
 
   return (
