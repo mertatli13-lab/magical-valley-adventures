@@ -1,4 +1,4 @@
-import { HEARTS, MAX_DT, PHASE1_SPEED, SPAWNER } from '../config';
+import { COLLISION, HEARTS, MAX_DT, PLAYER, SPAWNER } from '../config';
 import {
   createBarrierPool,
   moveBarriers,
@@ -8,20 +8,32 @@ import {
   type BarrierType,
 } from './barriers';
 import { sweptOverlapZ, touchesBarrier } from './collision';
-import { effectiveSpeed, gapTimeFor, tierAt } from './difficulty';
+import { baseSpeedAt, effectiveSpeed, gapTimeFor, tierAt } from './difficulty';
 import { createGround, resetGround, stepGround, type GroundState } from './ground';
 import { InputBuffer } from './input';
+import { clamp } from './math';
 import { createPlayer, resetPlayer, updatePlayer, type PlayerState } from './player';
 import { createSpawner, resetSpawner, stepSpawner, type SpawnerState } from './spawner';
+import {
+  createCollectFeed,
+  createStarPool,
+  moveStars,
+  pushCollect,
+  resetStarPool,
+  starValue,
+  type CollectFeed,
+  type StarPool,
+} from './stars';
+import { RateWindow } from './stats';
 
-export type RunStatus = 'RUNNING' | 'OUT';
+export type RunStatus = 'RUNNING' | 'PAUSED' | 'OUT';
 
 /** Everything the simulation of one run needs. Created once and reused across runs. */
 export interface RunState {
   status: RunStatus;
   time: number;
   distance: number;
-  /** Speed before the hit slowdown. Constant until the difficulty curve (Phase 3). */
+  /** Speed before the hit slowdown (A4). */
   baseSpeed: number;
   /** Speed the world actually scrolls at this frame. */
   speed: number;
@@ -37,9 +49,18 @@ export interface RunState {
   lastHitType: BarrierType;
   lastHitX: number;
   lastHitZ: number;
+  /** Run score: the value of stars collected (a big star is worth 10). */
+  runStars: number;
+  /** Number of star pickups this run. */
+  starsCollected: number;
+  collectFeed: CollectFeed;
+  /** Stars placed and collected per minute, for the debug panel. */
+  placedRate: RateWindow;
+  collectedRate: RateWindow;
   player: PlayerState;
   ground: GroundState;
   barriers: BarrierPool;
+  stars: StarPool;
   spawner: SpawnerState;
   input: InputBuffer;
 }
@@ -49,10 +70,10 @@ export function createRun(seed: number = SPAWNER.DEFAULT_SEED): RunState {
     status: 'RUNNING',
     time: 0,
     distance: 0,
-    baseSpeed: PHASE1_SPEED,
-    speed: PHASE1_SPEED,
+    baseSpeed: baseSpeedAt(0),
+    speed: baseSpeedAt(0),
     tier: 0,
-    gapTime: gapTimeFor(PHASE1_SPEED),
+    gapTime: gapTimeFor(baseSpeedAt(0)),
     forcedTier: null,
     hearts: HEARTS.START,
     wasHit: false,
@@ -60,9 +81,15 @@ export function createRun(seed: number = SPAWNER.DEFAULT_SEED): RunState {
     lastHitType: 'L',
     lastHitX: 0,
     lastHitZ: 0,
+    runStars: 0,
+    starsCollected: 0,
+    collectFeed: createCollectFeed(),
+    placedRate: new RateWindow(),
+    collectedRate: new RateWindow(),
     player: createPlayer(),
     ground: createGround(),
     barriers: createBarrierPool(),
+    stars: createStarPool(),
     spawner: createSpawner(seed),
     input: new InputBuffer(),
   };
@@ -74,16 +101,21 @@ export function resetRun(run: RunState, seed: number = SPAWNER.DEFAULT_SEED): vo
   run.status = 'RUNNING';
   run.time = 0;
   run.distance = 0;
-  run.baseSpeed = PHASE1_SPEED;
-  run.speed = PHASE1_SPEED;
+  run.baseSpeed = baseSpeedAt(0);
+  run.speed = run.baseSpeed;
   run.tier = 0;
-  run.gapTime = gapTimeFor(PHASE1_SPEED);
+  run.gapTime = gapTimeFor(run.baseSpeed);
   run.hearts = HEARTS.START;
   run.wasHit = false;
   run.hitCount = 0;
+  run.runStars = 0;
+  run.starsCollected = 0;
+  run.placedRate.reset();
+  run.collectedRate.reset();
   resetPlayer(run.player);
   resetGround(run.ground);
   resetBarrierPool(run.barriers);
+  resetStarPool(run.stars);
   resetSpawner(run.spawner, seed);
   run.input.consume();
 }
@@ -107,7 +139,7 @@ function onHit(run: RunState, barrier: Barrier): void {
 }
 
 /** Checks every active barrier the player's box was swept across this frame (A6). */
-function collide(run: RunState, distance: number): void {
+function collideBarriers(run: RunState, distance: number): void {
   const items = run.barriers.items;
   for (let i = 0; i < items.length; i++) {
     const barrier = items[i];
@@ -117,14 +149,39 @@ function collide(run: RunState, distance: number): void {
 }
 
 /**
+ * Collects every star within the pickup radius of the player's centre (A6).
+ * Each star moved from z - distance to z this frame, so its closest point to
+ * the hero along that path is used and fast frames cannot skip a star.
+ */
+function collectStars(run: RunState, distance: number): void {
+  const { player } = run;
+  const centerY = player.y + player.height / 2;
+  const radiusSquared = COLLISION.STAR_PICKUP_RADIUS * COLLISION.STAR_PICKUP_RADIUS;
+  const items = run.stars.items;
+  for (let i = 0; i < items.length; i++) {
+    const star = items[i];
+    if (!star?.active) continue;
+    const dz = clamp(PLAYER.Z, star.z - distance, star.z) - PLAYER.Z;
+    const dx = star.x - player.x;
+    const dy = star.y - centerY;
+    if (dx * dx + dy * dy + dz * dz > radiusSquared) continue;
+    star.active = false;
+    run.runStars += starValue(star);
+    run.starsCollected++;
+    run.collectedRate.add(run.time, 1);
+    pushCollect(run.collectFeed, star);
+  }
+}
+
+/**
  * Advances the run by one frame. `now` is in seconds, on the same clock as
- * input timestamps. Does nothing once the hero is out.
+ * input timestamps. Does nothing while paused or once the hero is out.
  */
 export function stepRun(run: RunState, realDt: number, now: number): void {
   if (run.status !== 'RUNNING') return;
   const dt = frameDt(realDt);
   run.time += dt;
-  run.baseSpeed = PHASE1_SPEED;
+  run.baseSpeed = baseSpeedAt(run.time);
   run.speed = effectiveSpeed(run.baseSpeed, run.player.safeTimer, run.wasHit);
   run.gapTime = gapTimeFor(run.baseSpeed);
   run.tier = run.forcedTier ?? tierAt(run.time);
@@ -134,7 +191,17 @@ export function stepRun(run: RunState, realDt: number, now: number): void {
   updatePlayer(run.player, run.input, now, dt);
   stepGround(run.ground, distance);
   moveBarriers(run.barriers, distance);
-  stepSpawner(run.spawner, run.barriers, distance, run.speed, run.time, run.tier, run.gapTime);
-  collide(run, distance);
+  moveStars(run.stars, distance);
+  const placedBefore = run.spawner.starsPlaced;
+  stepSpawner(run.spawner, run.barriers, run.stars, distance, run.speed, run.time, run.tier, run.gapTime);
+  if (run.spawner.starsPlaced !== placedBefore) run.placedRate.add(run.time, run.spawner.starsPlaced - placedBefore);
+  collideBarriers(run, distance);
+  collectStars(run, distance);
   if (run.player.safeTimer === 0) run.wasHit = false;
+}
+
+/** Pauses a running run or resumes a paused one. */
+export function togglePause(run: RunState): void {
+  if (run.status === 'RUNNING') run.status = 'PAUSED';
+  else if (run.status === 'PAUSED') run.status = 'RUNNING';
 }

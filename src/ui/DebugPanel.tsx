@@ -13,6 +13,10 @@ interface Snapshot {
   tier: number;
   gap: string;
   barriers: string;
+  time: string;
+  stars: number;
+  placed: string;
+  collected: string;
 }
 
 function readSnapshot(): Snapshot {
@@ -29,6 +33,10 @@ function readSnapshot(): Snapshot {
     gap: run.gapTime.toFixed(DEBUG.DECIMALS),
     barriers: `${activeBarrierCount(run.barriers)}/${run.barriers.items.length}` +
       (run.barriers.dropped > 0 ? ` (${run.barriers.dropped} dropped)` : ''),
+    time: run.time.toFixed(0),
+    stars: run.runStars,
+    placed: run.placedRate.perMinute(run.time).toFixed(0),
+    collected: run.collectedRate.perMinute(run.time).toFixed(0),
   };
 }
 
@@ -53,6 +61,8 @@ export function DebugPanel() {
     <dl className="debug-panel">
       <dt>fps</dt>
       <dd>{snapshot.fps}</dd>
+      <dt>time</dt>
+      <dd>{snapshot.time} s</dd>
       <dt>speed</dt>
       <dd>{snapshot.speed} m/s</dd>
       <dt>lane</dt>
@@ -69,6 +79,12 @@ export function DebugPanel() {
       <dd>{snapshot.gap} s</dd>
       <dt>barriers</dt>
       <dd>{snapshot.barriers}</dd>
+      <dt>stars</dt>
+      <dd>{snapshot.stars}</dd>
+      <dt>placed/min</dt>
+      <dd>{snapshot.placed}</dd>
+      <dt>collected/min</dt>
+      <dd>{snapshot.collected}</dd>
       <dt>
         <label htmlFor="force-tier">force tier</label>
       </dt>

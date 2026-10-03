@@ -28,13 +28,13 @@ describe('ground', () => {
 });
 
 describe('run', () => {
-  it('scrolls at 12 m/s and clamps slow frames to 1/30 s', () => {
+  it('starts at 12 m/s and clamps slow frames to 1/30 s', () => {
     const run = createRun();
     stepRun(run, 1 / 60, 0);
-    expect(run.speed).toBe(12);
-    expect(run.distance).toBeCloseTo(12 / 60);
+    expect(run.speed).toBeCloseTo(12, 1);
+    expect(run.time).toBeCloseTo(1 / 60);
     stepRun(run, 1, 0);
-    expect(run.distance).toBeCloseTo(12 / 60 + 12 / 30);
+    expect(run.time).toBeCloseTo(1 / 60 + 1 / 30);
   });
 
   it('reuses the same chunk array during a run', () => {

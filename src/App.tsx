@@ -1,7 +1,7 @@
 import { GameScene } from './scene/GameScene';
 import { DebugPanel } from './ui/DebugPanel';
+import { Hud } from './ui/Hud';
 import { OutBanner } from './ui/OutBanner';
-import { Title } from './ui/Title';
 import { useControls } from './ui/useControls';
 
 export function App() {
@@ -9,7 +9,7 @@ export function App() {
   return (
     <div className="app">
       <GameScene />
-      <Title />
+      <Hud />
       <OutBanner />
       <DebugPanel />
     </div>

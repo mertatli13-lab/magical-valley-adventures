@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FAIRNESS, HEARTS, JUMP, LANES, MAX_DT, PHASE1_SPEED, PLAYER } from '../config';
+import { FAIRNESS, HEARTS, JUMP, LANES, MAX_DT, PLAYER, SPEED } from '../config';
 import { activeBarrierCount, spawnBarrier, type BarrierType } from './barriers';
 import { sweptOverlapZ, touchesBarrier } from './collision';
 import { applyAction, laneX } from './player';
@@ -26,7 +26,7 @@ function runPast(run: RunState, onFrame?: (time: number) => void): void {
 
 /** When to press so the hero is at the top of the jump as the barrier arrives. */
 function jumpTimeFor(distance: number): number {
-  return distance / PHASE1_SPEED - JUMP.AIR_TIME / 2;
+  return distance / SPEED.START - JUMP.AIR_TIME / 2;
 }
 
 describe('first 3 seconds', () => {
@@ -77,7 +77,7 @@ describe('high barrier', () => {
     let slid = false;
     runPast(run, (time) => {
       // Slide shortly before it arrives; the 0.7 s slide covers the crossing.
-      if (!slid && time >= distance / PHASE1_SPEED - 0.3) {
+      if (!slid && time >= distance / SPEED.START - 0.3) {
         applyAction(run.player, 'SLIDE');
         slid = true;
       }
@@ -161,11 +161,11 @@ describe('hits and hearts', () => {
     expect(activeBarrierCount(run.barriers)).toBe(0);
     expect(run.player.safeTimer).toBe(HEARTS.HIT_SAFE_TIME);
     stepRun(run, DT, (time += DT));
-    expect(run.speed).toBeCloseTo(PHASE1_SPEED * HEARTS.HIT_SPEED_FACTOR);
+    expect(run.speed).toBeCloseTo(run.baseSpeed * HEARTS.HIT_SPEED_FACTOR);
     for (let t = 0; t < HEARTS.HIT_SAFE_TIME; t += DT) stepRun(run, DT, (time += DT));
     expect(run.player.safeTimer).toBe(0);
     stepRun(run, DT, (time += DT));
-    expect(run.speed).toBe(PHASE1_SPEED);
+    expect(run.speed).toBe(run.baseSpeed);
   });
 
   it('a barrier touched while safe costs nothing', () => {

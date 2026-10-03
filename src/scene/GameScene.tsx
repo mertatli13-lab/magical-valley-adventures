@@ -6,6 +6,8 @@ import { Ground } from './Ground';
 import { HitPop } from './HitPop';
 import { Player } from './Player';
 import { RunLoop } from './RunLoop';
+import { StarPops } from './StarPops';
+import { Stars } from './Stars';
 
 export function GameScene() {
   return (
@@ -28,6 +30,8 @@ export function GameScene() {
       <CameraRig />
       <Ground />
       <Barriers />
+      <Stars />
+      <StarPops />
       <HitPop />
       <Player />
     </Canvas>

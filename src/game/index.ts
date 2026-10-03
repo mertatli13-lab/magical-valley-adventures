@@ -9,3 +9,5 @@ export * from './player';
 export * from './random';
 export * from './run';
 export * from './spawner';
+export * from './stars';
+export * from './stats';

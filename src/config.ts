@@ -245,7 +245,10 @@ export const SPAWNER = {
 export const STAR_SPAWN = {
   /** n = clamp(floor((rowDistance - ROW_CLEARANCE) / STARS.SPACING), LINE_MIN, LINE_MAX). */
   ROW_CLEARANCE: 6,
-  /** Stars start this many metres behind the row. */
+  /**
+   * Stars start this many metres from the row, on the hero's side, and the
+   * line runs toward the hero through the gap before the previous row.
+   */
   LEAD_DISTANCE: 4,
   /** chance = clamp(STARS_PLACED_PER_MINUTE / (rowsPerMinute * n), MIN, MAX). */
   CHANCE_MIN: 0.2,
@@ -273,6 +276,8 @@ export const POOLS = {
   BARRIERS: 40,
   STARS: 150,
   GROUND_CHUNKS: 6,
+  /** Recent star pickups kept for the pop effect. */
+  COLLECT_EVENTS: 16,
 } as const;
 
 export const GROUND = {
@@ -283,9 +288,6 @@ export const GROUND = {
   /** When a chunk passes this z it jumps to the far end of the line. */
   RECYCLE_Z: 40,
 } as const;
-
-/** Phase 1: the world scrolls at a constant speed until A4 is implemented. */
-export const PHASE1_SPEED = SPEED.START;
 
 /** A frame step never exceeds this many seconds: dt = min(real dt, MAX_DT). */
 export const MAX_DT = 1 / 30;
@@ -327,6 +329,21 @@ export const RENDER = {
   TALL_COLOR: '#b48cff',
   /** Thickness of the grey-box high bar above its 0.9 m clearance. */
   HIGH_BAR_THICKNESS: 0.5,
+  /** Grey-box star: a flat five-point star, extruded. */
+  STAR_RADIUS: 0.3,
+  STAR_INNER_RATIO: 0.45,
+  STAR_POINTS: 5,
+  STAR_THICKNESS: 0.1,
+  STAR_COLOR: '#ffd84d',
+  BIG_STAR_COLOR: '#ff8fd0',
+  BIG_STAR_SCALE: 1.8,
+  /** Spin speed in radians per second. */
+  STAR_SPIN: 3,
+  /** Spin offset between pooled stars, so a line never turns edge-on all at once. */
+  STAR_PHASE_STEP: 2.4,
+  /** Pop when a star is collected. */
+  STAR_POP_DURATION: 0.25,
+  STAR_POP_END_SCALE: 2.2,
   /** Pop effect when a barrier is hit. */
   POP_COLOR: '#fff2a8',
   POP_DURATION: 0.35,
@@ -351,4 +368,6 @@ export const DEBUG = {
   FPS_SMOOTHING: 0.1,
   /** Decimal places shown in the panel. */
   DECIMALS: 2,
+  /** Stars per minute in the panel are measured over this many recent seconds. */
+  RATE_WINDOW_SECONDS: 60,
 } as const;

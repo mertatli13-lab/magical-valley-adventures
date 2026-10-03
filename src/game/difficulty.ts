@@ -1,6 +1,11 @@
 import { HEARTS, ROW_GAP, SPEED, TIER_THRESHOLDS } from '../config';
 import { clamp } from './math';
 
+/** Speed before the hit slowdown: min(28, 12 + 0.1 * runTime) m/s (A4). */
+export function baseSpeedAt(runTime: number): number {
+  return Math.min(SPEED.MAX, SPEED.START + SPEED.ACCELERATION * runTime);
+}
+
 /** Speed after the hit slowdown: x0.8 while safe after a hit (A4). */
 export function effectiveSpeed(baseSpeed: number, safeTimer: number, wasHit: boolean): number {
   return safeTimer > 0 && wasHit ? baseSpeed * HEARTS.HIT_SPEED_FACTOR : baseSpeed;

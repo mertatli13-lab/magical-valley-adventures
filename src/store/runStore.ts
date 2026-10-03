@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { createRun, resetRun, type RunState, type RunStatus } from '../game/run';
+import { createRun, resetRun, togglePause, type RunState, type RunStatus } from '../game/run';
 
 /** Live frame statistics written by the render loop, read by the debug panel. */
 export interface FrameStats {
@@ -27,6 +27,7 @@ interface RunStore {
   /** Called by the render loop after each step. */
   syncStatus: () => void;
   restart: () => void;
+  togglePause: () => void;
   setForcedTier: (tier: number | null) => void;
 }
 
@@ -44,6 +45,11 @@ export const useRunStore = create<RunStore>((set, get) => ({
   restart: () => {
     const { run } = get();
     resetRun(run, newSeed());
+    set({ status: run.status });
+  },
+  togglePause: () => {
+    const { run } = get();
+    togglePause(run);
     set({ status: run.status });
   },
   setForcedTier: (tier) => {

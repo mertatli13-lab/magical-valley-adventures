@@ -6,6 +6,9 @@ import { useRunStore } from '../store/runStore';
 /** Restarts the run from the temporary OUT text (Phase 2; replaced by the Out screen in Phase 4). */
 const RESTART_KEY = 'KeyR';
 
+/** Keys that pause and resume the run. */
+const PAUSE_KEYS = ['KeyP', 'Escape'];
+
 /** Seconds on the same clock the render loop uses to consume the input buffer. */
 export function nowSeconds(): number {
   return performance.now() / 1000;
@@ -17,7 +20,7 @@ export function nowSeconds(): number {
  */
 export function useControls(): void {
   useEffect(() => {
-    const { run, toggleDebug, restart } = useRunStore.getState();
+    const { run, toggleDebug, restart, togglePause } = useRunStore.getState();
     let startX = 0;
     let startY = 0;
     let tracking = false;
@@ -25,6 +28,10 @@ export function useControls(): void {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code === DEBUG.TOGGLE_KEY) {
         if (!event.repeat) toggleDebug();
+        return;
+      }
+      if (PAUSE_KEYS.includes(event.code)) {
+        if (!event.repeat) togglePause();
         return;
       }
       if (event.code === RESTART_KEY) {

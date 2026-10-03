@@ -1,6 +1,10 @@
 :root {
-  --title-color: #ffffff;
-  --title-shadow: #e46aa6;
+  --hud-text: #ffffff;
+  --hud-shadow: #e46aa6;
+  --hud-heart: #ff5c9a;
+  --hud-heart-empty: rgba(255, 255, 255, 0.45);
+  --hud-star: #ffd84d;
+  --hud-button: rgba(228, 106, 166, 0.85);
 }
 
 * {
@@ -33,28 +37,6 @@ body,
 .scene {
   position: absolute !important;
   inset: 0;
-}
-
-.title-overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: calc(env(safe-area-inset-top) + 8vh) 16px 0;
-  pointer-events: none;
-}
-
-.title {
-  margin: 0;
-  font-family: 'Trebuchet MS', 'Avenir Next', system-ui, sans-serif;
-  font-size: clamp(28px, 7vw, 72px);
-  font-weight: 800;
-  text-align: center;
-  color: var(--title-color);
-  text-shadow:
-    0 3px 0 var(--title-shadow),
-    0 6px 18px rgba(0, 0, 0, 0.18);
 }
 
 .debug-panel {
@@ -101,4 +83,96 @@ body,
   color: #ffffff;
   font: 800 clamp(24px, 5vw, 48px) 'Trebuchet MS', system-ui, sans-serif;
   cursor: pointer;
+}
+
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  font-family: 'Trebuchet MS', 'Avenir Next', system-ui, sans-serif;
+  color: var(--hud-text);
+  text-shadow: 0 2px 0 var(--hud-shadow);
+}
+
+.hud-hearts {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 12px);
+  left: calc(env(safe-area-inset-left) + 16px);
+  display: flex;
+  gap: 4px;
+  font-size: 36px;
+  line-height: 48px;
+}
+
+.heart {
+  color: var(--hud-heart);
+  transition: color 0.2s, transform 0.2s;
+}
+
+.heart.empty {
+  color: var(--hud-heart-empty);
+  transform: scale(0.85);
+}
+
+.hud-center {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.hud-stars {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 48px;
+}
+
+.hud-star-icon {
+  margin-right: 6px;
+  color: var(--hud-star);
+}
+
+.hud-stars.bounce {
+  animation: hud-bounce 0.2s ease-out;
+}
+
+@keyframes hud-bounce {
+  50% {
+    transform: scale(1.25);
+  }
+}
+
+.hud-distance {
+  font-size: 16px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.hud-pause {
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 12px);
+  right: calc(env(safe-area-inset-right) + 16px);
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: var(--hud-button);
+  color: var(--hud-text);
+  font: 800 22px system-ui, sans-serif;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.hud-pause:disabled {
+  opacity: 0.4;
+}
+
+.hud-paused {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: clamp(32px, 7vw, 64px);
+  font-weight: 800;
 }
