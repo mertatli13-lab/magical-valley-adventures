@@ -1,0 +1,149 @@
+import { useFrame, useThree } from '@react-three/fiber';
+import { useLayoutEffect, useMemo, useRef } from 'react';
+import { Color, Fog, MathUtils, Vector3, type DirectionalLight, type HemisphereLight, type PerspectiveCamera } from 'three';
+import { CAMERA, EFFECTS, LIGHTING, NIGHT, RENDER, SCREENS } from '../config';
+import type { Screen } from '../game/machine';
+import { frameDt } from '../game/run';
+import { useGameStore } from '../store/gameStore';
+import { isDayScreen, mood } from './mood';
+
+type Pose = 'SKY' | 'SELECT' | 'RUN';
+
+function poseFor(screen: Screen): Pose {
+  if (screen === 'LANDING') return 'SKY';
+  if (isDayScreen(screen)) return 'RUN';
+  return 'SELECT';
+}
+
+function smoothstep(t: number): number {
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * Owns the camera, sky colour, fog and lights. Blends the camera between the
+ * sky (behind the Landing art), the select stage and the run over 0.8 s, and
+ * fades night to day as a run starts.
+ */
+export function Director() {
+  const scene = useThree((state) => state.scene);
+  const hemi = useRef<HemisphereLight>(null);
+  const sun = useRef<DirectionalLight>(null);
+  const v = useMemo(
+    () => ({
+      night: new Color(NIGHT.SKY_COLOR),
+      day: new Color(RENDER.SKY_COLOR),
+      dayFog: new Color(RENDER.FOG_COLOR),
+      sky: new Color(NIGHT.SKY_COLOR),
+      fog: new Color(NIGHT.SKY_COLOR),
+      fromPosition: new Vector3(...SCREENS.SKY_CAMERA_POSITION),
+      fromLook: new Vector3(...SCREENS.SKY_LOOK_AT),
+      look: new Vector3(...SCREENS.SKY_LOOK_AT),
+      targetPosition: new Vector3(),
+      targetLook: new Vector3(),
+    }),
+    [],
+  );
+  const pose = useRef<Pose>('SKY');
+  const blend = useRef(1);
+  const followX = useRef(0);
+  // The shop covers the screen; keep the scene as it was on the screen it was opened from.
+  const sceneScreen = useRef<Screen>('LANDING');
+  const shake = useRef({ frames: 0, seenHits: 0 });
+
+  useLayoutEffect(() => {
+    scene.background = v.sky;
+    scene.fog = new Fog(v.fog, RENDER.FOG_NEAR, RENDER.FOG_FAR);
+  }, [scene, v]);
+
+  useFrame(({ camera }, delta) => {
+    const dt = frameDt(delta);
+    const { session } = useGameStore.getState();
+    // Screen transitions follow real time, not the clamped simulation step, so they
+    // still take 0.8 s on a device that is running slowly.
+    const step = Math.min(delta, SCREENS.TRANSITION_TIME) / SCREENS.TRANSITION_TIME;
+    if (session.screen !== 'SHOP') sceneScreen.current = session.screen;
+    const screen = sceneScreen.current;
+
+    // Night to day.
+    const dayTarget = isDayScreen(screen) ? 1 : 0;
+    mood.daylight += Math.sign(dayTarget - mood.daylight) * Math.min(step, Math.abs(dayTarget - mood.daylight));
+    v.sky.copy(v.night).lerp(v.day, mood.daylight);
+    // Day fog matches the sky dome's horizon, so it hides the spawn point cleanly.
+    v.fog.copy(v.night).lerp(v.dayFog, mood.daylight);
+    if (scene.fog) scene.fog.color.copy(v.fog); // Fog keeps its own copy of the colour
+    if (hemi.current) {
+      hemi.current.intensity =
+        LIGHTING.HEMI_NIGHT_INTENSITY + (LIGHTING.HEMI_DAY_INTENSITY - LIGHTING.HEMI_NIGHT_INTENSITY) * mood.daylight;
+    }
+    if (sun.current) {
+      sun.current.intensity = NIGHT.SUN_INTENSITY + (RENDER.SUN_INTENSITY - NIGHT.SUN_INTENSITY) * mood.daylight;
+    }
+
+    // Camera target for this screen.
+    const nextPose = poseFor(screen);
+    if (nextPose !== pose.current) {
+      pose.current = nextPose;
+      blend.current = 0;
+      v.fromPosition.copy(camera.position);
+      v.fromLook.copy(v.look);
+    }
+    if (nextPose === 'SKY') {
+      v.targetPosition.set(...SCREENS.SKY_CAMERA_POSITION);
+      v.targetLook.set(...SCREENS.SKY_LOOK_AT);
+    } else if (nextPose === 'SELECT') {
+      v.targetPosition.set(...SCREENS.SELECT_CAMERA_POSITION);
+      v.targetLook.set(...SCREENS.SELECT_LOOK_AT);
+    } else {
+      // Run: fixed behind the hero, easing sideways toward 30% of the player's x.
+      const target = session.run.player.x * CAMERA.FOLLOW_X_FACTOR;
+      followX.current += (target - followX.current) * (1 - Math.exp(-CAMERA.FOLLOW_RATE * dt));
+      const [px, py, pz] = CAMERA.POSITION;
+      const [lx, ly, lz] = CAMERA.LOOK_AT;
+      v.targetPosition.set(px + followX.current, py, pz);
+      v.targetLook.set(lx + followX.current, ly, lz);
+    }
+    blend.current = Math.min(1, blend.current + step);
+    const s = smoothstep(blend.current);
+    // Portrait: widen the view just enough to keep the lanes in frame. Landscape keeps the normal FOV.
+    const lens = camera as PerspectiveCamera;
+    const minVertical = MathUtils.radToDeg(
+      2 * Math.atan(Math.tan(MathUtils.degToRad(CAMERA.MIN_HORIZONTAL_FOV) / 2) / lens.aspect),
+    );
+    const fov = Math.max(CAMERA.FOV, minVertical);
+    if (Math.abs(lens.fov - fov) > 0.01) {
+      lens.fov = fov;
+      lens.updateProjectionMatrix();
+    }
+
+    camera.position.lerpVectors(v.fromPosition, v.targetPosition, s);
+    v.look.lerpVectors(v.fromLook, v.targetLook, s);
+    camera.lookAt(v.look);
+
+    // A short shake on a hit: a few frames, off with "reduce motion".
+    const { run } = session;
+    if (run.hitCount !== shake.current.seenHits) {
+      if (run.hitCount > shake.current.seenHits && !session.save.settings.reduceMotion) shake.current.frames = EFFECTS.SHAKE_FRAMES;
+      shake.current.seenHits = run.hitCount;
+    }
+    if (shake.current.frames > 0 && session.screen !== 'PAUSE') {
+      shake.current.frames--;
+      camera.position.x += (Math.random() * 2 - 1) * EFFECTS.SHAKE_AMOUNT;
+      camera.position.y += (Math.random() * 2 - 1) * EFFECTS.SHAKE_AMOUNT;
+    }
+  });
+
+  return (
+    <>
+      <hemisphereLight
+        ref={hemi}
+        args={[LIGHTING.HEMI_SKY_COLOR, LIGHTING.HEMI_GROUND_COLOR, LIGHTING.HEMI_NIGHT_INTENSITY]}
+      />
+      <directionalLight
+        ref={sun}
+        color={LIGHTING.SUN_COLOR}
+        position={[...RENDER.SUN_POSITION]}
+        intensity={NIGHT.SUN_INTENSITY}
+      />
+    </>
+  );
+}
