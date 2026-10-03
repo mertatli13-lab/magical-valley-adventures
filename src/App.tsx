@@ -6,6 +6,7 @@ import { Out } from './ui/screens/Out';
 import { Pause } from './ui/screens/Pause';
 import { Results } from './ui/screens/Results';
 import { Select } from './ui/screens/Select';
+import { Shop } from './ui/screens/Shop';
 import { useControls } from './ui/useControls';
 
 export function App() {
@@ -18,6 +19,7 @@ export function App() {
       <Pause />
       <Out />
       <Results />
+      <Shop />
       <Landing />
       <DebugPanel />
     </div>

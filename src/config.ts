@@ -456,6 +456,55 @@ export const CHARACTER_POSES = {
   CELEBRATE_RATE: 6,
 } as const;
 
+/**
+ * Placeholder accessories until the real models arrive (Phase 6). Each is a
+ * simple shape at its attach point: `size` is [width, height, depth] for a
+ * box, [radius, height] for a cone, [radius, tube] for a torus and [radius]
+ * for a sphere. `lift` raises it and `back` moves it behind the hero (+z).
+ */
+export const ACCESSORY_LOOKS = {
+  bow: { shape: 'box', color: '#ff5c9a', size: [0.32, 0.14, 0.1], lift: 0.02, back: 0 },
+  scarf: { shape: 'torus', color: '#ff8a65', size: [0.3, 0.07], lift: 0, back: 0 },
+  'flower-crown': { shape: 'torus', color: '#ffb3d9', size: [0.24, 0.06], lift: 0, back: 0 },
+  'star-glasses': { shape: 'box', color: '#ffd84d', size: [0.5, 0.12, 0.05], lift: -0.2, back: -0.32 },
+  cape: { shape: 'box', color: '#e53935', size: [0.6, 0.75, 0.04], lift: -0.3, back: 0.38 },
+  'wizard-hat': { shape: 'cone', color: '#5e35b1', size: [0.3, 0.6], lift: 0.3, back: 0 },
+  backpack: { shape: 'box', color: '#a1887f', size: [0.42, 0.45, 0.2], lift: -0.1, back: 0.42 },
+  'party-hat': { shape: 'cone', color: '#26c6da', size: [0.2, 0.45], lift: 0.22, back: 0 },
+  'sparkle-trail': { shape: 'sphere', color: '#fff59d', size: [0.1], lift: 0, back: 0.4 },
+  'glowing-wings': { shape: 'box', color: '#e1f5fe', size: [1, 0.4, 0.04], lift: 0, back: 0.38 },
+} as const;
+
+/** Where each attach point sits, as a share of the hero's current height. */
+export const ATTACH_HEIGHTS = {
+  acc_head: 1,
+  acc_neck: 0.72,
+  acc_back: 0.62,
+} as const;
+
+/** Placeholder looks for the signature moves. Cosmetic only. */
+export const MOVE_LOOKS = {
+  /** Stretchy leap: extra height at the top of the jump. */
+  STRETCH: 0.4,
+  /** Victory punch: statue-like tilt at the top of the jump (radians). */
+  PUNCH_TILT: 0.35,
+  /** Brave glide: wings spread sideways and the body leans in the second half. */
+  GLIDE_SPREAD: 0.9,
+  GLIDE_TILT: 0.3,
+  /** Clumsy tumble: full rolls during the slide. */
+  TUMBLE_TURNS: 2,
+  /** Trails (rainbow dash, sparkle trail): beads streaming behind the hero. */
+  TRAIL_COUNT: 7,
+  TRAIL_SPACING: 0.35,
+  TRAIL_SIZE: 0.12,
+  TRAIL_HEIGHT: 0.25,
+  TRAIL_WOBBLE: 0.08,
+  TRAIL_WOBBLE_RATE: 12,
+  RAINBOW: ['#ff5252', '#ffa726', '#ffee58', '#66bb6a', '#42a5f5', '#7e57c2', '#ec407a'],
+  SPARKLE_COLOR: '#fff59d',
+  SEGMENTS: 8,
+} as const;
+
 export const DEBUG = {
   /** KeyboardEvent.code that shows or hides the debug panel. */
   TOGGLE_KEY: 'Backquote',
@@ -467,4 +516,8 @@ export const DEBUG = {
   DECIMALS: 2,
   /** Stars per minute in the panel are measured over this many recent seconds. */
   RATE_WINDOW_SECONDS: 60,
+  /** Stars added by the development-only debug button. */
+  ADD_STARS: 1000,
+  /** Touches that toggle the debug panel on a tablet (development only). */
+  TOGGLE_TOUCHES: 3,
 } as const;

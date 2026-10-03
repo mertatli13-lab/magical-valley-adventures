@@ -17,6 +17,7 @@ export function nowSeconds(): number {
  * - Pause: P or Escape resumes.
  * - Select: left and right turn the stage. A swipe left brings the next
  *   character to the front, like the arrow key on the right.
+ * - Shop: Escape goes back.
  * Buttons on each screen handle taps, Enter and Space themselves.
  * The run also pauses when the browser tab is hidden.
  */
@@ -45,6 +46,8 @@ export function useControls(): void {
         if (!event.repeat) session().run.input.push(action, nowSeconds()); // holding a key does not repeat
       } else if (screen === 'PAUSE') {
         if (PAUSE_KEYS.includes(event.code) && !event.repeat) act((s) => s.resume());
+      } else if (screen === 'SHOP') {
+        if (event.code === 'Escape' && !event.repeat && !document.querySelector('[role="dialog"]')) act((s) => s.back());
       } else if (screen === 'SELECT') {
         if (action !== 'LEFT' && action !== 'RIGHT') return;
         event.preventDefault();
@@ -53,6 +56,12 @@ export function useControls(): void {
     };
 
     const onTouchStart = (event: TouchEvent) => {
+      // Development only: a three-finger tap opens the debug panel on a tablet with no keyboard.
+      if (import.meta.env.DEV && event.touches.length === DEBUG.TOGGLE_TOUCHES) {
+        toggleDebug();
+        tracking = false;
+        return;
+      }
       const touch = event.changedTouches[0];
       if (!touch || tracking) return;
       tracking = true;

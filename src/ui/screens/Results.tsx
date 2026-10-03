@@ -23,7 +23,7 @@ export function Results() {
         <button type="button" className="primary-button" autoFocus onClick={() => act((s) => s.playAgain())}>
           Play again
         </button>
-        <button type="button" className="secondary-button" disabled title="Coming soon">
+        <button type="button" className="secondary-button" onClick={() => act((s) => s.openShop())}>
           Shop
         </button>
         <button type="button" className="secondary-button" onClick={() => act((s) => s.home())}>

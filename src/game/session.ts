@@ -1,6 +1,16 @@
 import { REVIVE, SPAWNER } from '../config';
-import { CHARACTERS, type CharacterInfo } from './catalogue';
-import { canRevive, payRunStarsFirst, reviveCost } from './economy';
+import {
+  ACCESSORIES,
+  CHARACTERS,
+  moveFor,
+  priceOf,
+  SIGNATURE_MOVES,
+  type CharacterId,
+  type CharacterInfo,
+  type ItemKind,
+  type SignatureMoveInfo,
+} from './catalogue';
+import { canBuy, canRevive, payRunStarsFirst, reviveCost } from './economy';
 import { GameMachine, type Screen } from './machine';
 import { createRun, frameDt, resetRun, reviveRun, stepRun, type RunState } from './run';
 import { loadSave, writeSave, type SaveData, type StorageLike } from './save';
@@ -206,6 +216,97 @@ export class Session {
 
   back(): void {
     if (this.machine.send('BACK')) this.changed();
+  }
+
+  // --- Shop and equipment ----------------------------------------------------
+
+  private ownedList(kind: ItemKind): string[] {
+    const { owned } = this.save;
+    return kind === 'character' ? owned.characters : kind === 'accessory' ? owned.accessories : owned.moves;
+  }
+
+  isOwned(kind: ItemKind, id: string): boolean {
+    return this.ownedList(kind).includes(id);
+  }
+
+  /** A signature move can only be bought for a character the player owns. */
+  canBuyMove(move: SignatureMoveInfo): boolean {
+    return this.save.owned.characters.includes(move.character);
+  }
+
+  canBuy(kind: ItemKind, id: string): boolean {
+    const price = priceOf(kind, id);
+    if (price === undefined) return false;
+    if (kind === 'move') {
+      const move = SIGNATURE_MOVES.find((m) => m.id === id);
+      if (!move || !this.canBuyMove(move)) return false;
+    }
+    return canBuy(price, this.save.totalStars, this.isOwned(kind, id));
+  }
+
+  /** Buys an item from the saved total (A7 buy). Returns whether it was bought. */
+  buy(kind: ItemKind, id: string): boolean {
+    if (!this.canBuy(kind, id)) return false;
+    this.save.totalStars -= priceOf(kind, id) ?? 0;
+    if (kind === 'character') this.save.owned.characters.push(id as CharacterId);
+    else this.ownedList(kind).push(id);
+    this.persist();
+    this.changed();
+    return true;
+  }
+
+  /** Makes an owned character the hero, and focuses it on the select stage. */
+  equipCharacter(id: CharacterId): boolean {
+    if (!this.isOwned('character', id)) return false;
+    this.save.equipped.character = id;
+    const index = CHARACTERS.findIndex((c) => c.id === id);
+    // Move the stage the short way to the new character.
+    const current = mod(this.selection, CHARACTERS.length);
+    let step = index - current;
+    if (step > CHARACTERS.length / 2) step -= CHARACTERS.length;
+    if (step < -CHARACTERS.length / 2) step += CHARACTERS.length;
+    this.selection += step;
+    this.persist();
+    this.changed();
+    return true;
+  }
+
+  /** Wears an owned accessory (one at a time, on every character), or takes it off with null. */
+  equipAccessory(id: string | null): boolean {
+    if (id !== null && !this.isOwned('accessory', id)) return false;
+    this.save.equipped.accessory = id;
+    this.persist();
+    this.changed();
+    return true;
+  }
+
+  get equippedAccessory(): (typeof ACCESSORIES)[number] | undefined {
+    return ACCESSORIES.find((item) => item.id === this.save.equipped.accessory);
+  }
+
+  /** Switches an owned signature move on or off for its character. */
+  setMoveOn(id: string, on: boolean): boolean {
+    if (!this.isOwned('move', id)) return false;
+    this.save.equipped.moves[id] = on;
+    this.persist();
+    this.changed();
+    return true;
+  }
+
+  isMoveOn(id: string): boolean {
+    return this.isOwned('move', id) && this.save.equipped.moves[id] === true;
+  }
+
+  /** The signature move the hero plays, if the equipped character has it switched on. */
+  get activeMove(): SignatureMoveInfo | undefined {
+    const move = moveFor(this.save.equipped.character);
+    return move && this.isMoveOn(move.id) ? move : undefined;
+  }
+
+  /** Saves after a direct change to `save` and lets the screens update. */
+  saveProgress(): void {
+    this.persist();
+    this.changed();
   }
 
   // --- Frame -------------------------------------------------------------------

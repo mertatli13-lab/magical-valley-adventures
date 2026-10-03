@@ -59,10 +59,9 @@ export function Select() {
         type="button"
         className="primary-button"
         autoFocus
-        disabled={!owned}
-        onClick={() => act((s) => s.choose())}
+        onClick={() => act((s) => (owned ? s.choose() : s.tapLocked()))}
       >
-        {owned ? 'CHOOSE' : 'LOCKED'}
+        {owned ? 'CHOOSE' : `UNLOCK · ★ ${character.price.toLocaleString('en')}`}
       </button>
     </div>
   );

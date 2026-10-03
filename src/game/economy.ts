@@ -19,3 +19,8 @@ export function payRunStarsFirst(cost: number, runStars: number, totalStars: num
   const fromRun = Math.min(cost, runStars);
   return { runStars: runStars - fromRun, totalStars: totalStars - (cost - fromRun) };
 }
+
+/** A purchase is allowed when the item is not owned yet and the saved total covers it (A7 buy). */
+export function canBuy(price: number, totalStars: number, owned: boolean): boolean {
+  return !owned && totalStars >= price;
+}

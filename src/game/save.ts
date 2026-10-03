@@ -1,5 +1,5 @@
 import { DEFAULT_CHARACTER, SAVE } from '../config';
-import { FREE_CHARACTERS, isCharacterId, type CharacterId } from './catalogue';
+import { FREE_CHARACTERS, isAccessoryId, isCharacterId, isMoveId, type CharacterId } from './catalogue';
 
 /** The save format from A8. */
 export interface SaveData {
@@ -7,6 +7,7 @@ export interface SaveData {
   totalStars: number;
   bestRun: number;
   owned: { characters: CharacterId[]; accessories: string[]; moves: string[] };
+  /** `moves` maps a signature move id to whether it is switched on for its character. */
   equipped: { character: CharacterId; accessory: string | null; moves: Record<string, boolean> };
   settings: { music: boolean; sound: boolean };
 }
@@ -74,18 +75,22 @@ export function parseSave(raw: string | null): SaveData {
   ) {
     return defaultSave();
   }
-  // Unknown character ids are ignored; free characters are always owned.
+  // Unknown ids are ignored; free characters are always owned; only owned items can be equipped.
   const characters = [...new Set([...FREE_CHARACTERS, ...owned.characters.filter(isCharacterId)])];
+  const accessories = [...new Set(owned.accessories.filter(isAccessoryId))];
+  const moves = [...new Set(owned.moves.filter(isMoveId))];
   const character =
     isCharacterId(equipped.character) && characters.includes(equipped.character)
       ? equipped.character
       : DEFAULT_CHARACTER;
+  const accessory = equipped.accessory !== null && accessories.includes(equipped.accessory) ? equipped.accessory : null;
+  const movesOn = Object.fromEntries(Object.entries(equipped.moves).filter(([id]) => moves.includes(id)));
   return {
     version: SAVE.VERSION,
     totalStars: data.totalStars,
     bestRun: data.bestRun,
-    owned: { characters, accessories: owned.accessories, moves: owned.moves },
-    equipped: { character, accessory: equipped.accessory, moves: equipped.moves },
+    owned: { characters, accessories, moves },
+    equipped: { character, accessory, moves: movesOn },
     settings: { music: settings.music, sound: settings.sound },
   };
 }

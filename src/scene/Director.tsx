@@ -44,6 +44,8 @@ export function Director() {
   const pose = useRef<Pose>('SKY');
   const blend = useRef(1);
   const followX = useRef(0);
+  // The shop covers the screen; keep the scene as it was on the screen it was opened from.
+  const sceneScreen = useRef<Screen>('LANDING');
 
   useLayoutEffect(() => {
     scene.background = v.sky;
@@ -54,9 +56,11 @@ export function Director() {
     const dt = frameDt(delta);
     const { session } = useGameStore.getState();
     const step = dt / SCREENS.TRANSITION_TIME;
+    if (session.screen !== 'SHOP') sceneScreen.current = session.screen;
+    const screen = sceneScreen.current;
 
     // Night to day.
-    const dayTarget = isDayScreen(session.screen) ? 1 : 0;
+    const dayTarget = isDayScreen(screen) ? 1 : 0;
     mood.daylight += Math.sign(dayTarget - mood.daylight) * Math.min(step, Math.abs(dayTarget - mood.daylight));
     v.sky.copy(v.night).lerp(v.day, mood.daylight);
     if (scene.fog) scene.fog.color.copy(v.sky); // Fog keeps its own copy of the colour
@@ -68,7 +72,7 @@ export function Director() {
     }
 
     // Camera target for this screen.
-    const nextPose = poseFor(session.screen);
+    const nextPose = poseFor(screen);
     if (nextPose !== pose.current) {
       pose.current = nextPose;
       blend.current = 0;

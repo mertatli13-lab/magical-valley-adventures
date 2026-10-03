@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DEBUG, SPAWNER } from '../config';
 import { activeBarrierCount } from '../game/barriers';
+import { addStarsForTesting } from '../game/debug';
 import { useGameStore } from '../store/gameStore';
 
 interface Snapshot {
@@ -49,6 +50,7 @@ export function DebugPanel() {
   const visible = useGameStore((state) => state.debugVisible);
   const forcedTier = useGameStore((state) => state.forcedTier);
   const setForcedTier = useGameStore((state) => state.setForcedTier);
+  const act = useGameStore((state) => state.act);
   const [snapshot, setSnapshot] = useState(readSnapshot);
 
   useEffect(() => {
@@ -103,6 +105,13 @@ export function DebugPanel() {
           ))}
         </select>
       </dd>
+      {import.meta.env.DEV && (
+        <dd className="debug-actions">
+          <button type="button" onClick={() => act((s) => addStarsForTesting(s, DEBUG.ADD_STARS))}>
+            +{DEBUG.ADD_STARS} ★
+          </button>
+        </dd>
+      )}
     </dl>
   );
 }
