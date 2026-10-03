@@ -1,6 +1,9 @@
 import { Canvas } from '@react-three/fiber';
-import { CAMERA, GROUND, RENDER } from '../config';
+import { CAMERA, RENDER } from '../config';
+import { CameraRig } from './CameraRig';
 import { Ground } from './Ground';
+import { Player } from './Player';
+import { RunLoop } from './RunLoop';
 
 export function GameScene() {
   return (
@@ -19,7 +22,10 @@ export function GameScene() {
       <fog attach="fog" args={[RENDER.SKY_COLOR, RENDER.FOG_NEAR, RENDER.FOG_FAR]} />
       <ambientLight intensity={RENDER.AMBIENT_INTENSITY} />
       <directionalLight position={[...RENDER.SUN_POSITION]} intensity={RENDER.SUN_INTENSITY} />
-      <Ground width={GROUND.CHUNK_WIDTH} length={RENDER.GROUND_LENGTH} centerZ={RENDER.GROUND_CENTER_Z} />
+      <RunLoop />
+      <CameraRig />
+      <Ground />
+      <Player />
     </Canvas>
   );
 }

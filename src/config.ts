@@ -206,6 +206,10 @@ export const CAMERA = {
   FOV: 60,
   NEAR: 0.1,
   FAR: 200,
+  /** The camera eases toward this share of the player's x (Prompt 1). */
+  FOLLOW_X_FACTOR: 0.3,
+  /** How fast the camera eases sideways, per second (tuning value). */
+  FOLLOW_RATE: 8,
 } as const;
 
 /** A2. Input. */
@@ -276,6 +280,9 @@ export const GROUND = {
   RECYCLE_Z: 40,
 } as const;
 
+/** Phase 1: the world scrolls at a constant speed until A4 is implemented. */
+export const PHASE1_SPEED = SPEED.START;
+
 /** A frame step never exceeds this many seconds: dt = min(real dt, MAX_DT). */
 export const MAX_DT = 1 / 30;
 
@@ -292,11 +299,22 @@ export const SAVE = {
 export const RENDER = {
   /** Device pixel ratio range; capped at 2 to keep iPads at 60 fps. */
   DPR: [1, 2],
-  /** Ground plane covers the visible track from behind the camera to past the spawn point. */
-  GROUND_LENGTH: 160,
-  GROUND_CENTER_Z: -60,
   SKY_COLOR: '#bfe3ff',
   GROUND_COLOR: '#f7d6e6',
+  /** Grey-box lane stripes: width of each stripe inside its 2 m lane. */
+  LANE_STRIPE_WIDTH: 1.7,
+  LANE_STRIPE_COLOR: '#fbe9f1',
+  /** Cross bands on each chunk so the scrolling is easy to see. */
+  BANDS_PER_CHUNK: 4,
+  BAND_DEPTH: 0.5,
+  BAND_COLOR: '#efc3d8',
+  /** Small heights that stop stripes and bands flickering against the ground. */
+  STRIPE_LIFT: 0.01,
+  BAND_LIFT: 0.02,
+  /** Grey-box player capsule. */
+  PLAYER_COLOR: '#9b8cff',
+  PLAYER_CAP_SEGMENTS: 8,
+  PLAYER_RADIAL_SEGMENTS: 16,
   FOG_NEAR: 60,
   FOG_FAR: 130,
   AMBIENT_INTENSITY: 1.1,
@@ -304,4 +322,15 @@ export const RENDER = {
   SUN_POSITION: [5, 10, 5],
   /** Rotation that lays a plane flat on the ground. */
   FLAT_ROTATION_X: -Math.PI / 2,
+} as const;
+
+export const DEBUG = {
+  /** KeyboardEvent.code that shows or hides the debug panel. */
+  TOGGLE_KEY: 'Backquote',
+  /** How often the debug panel refreshes, in milliseconds. */
+  REFRESH_MS: 200,
+  /** Smoothing factor for the fps reading (0..1, higher reacts faster). */
+  FPS_SMOOTHING: 0.1,
+  /** Decimal places shown in the panel. */
+  DECIMALS: 2,
 } as const;
