@@ -1,0 +1,58 @@
+:root {
+  --title-color: #ffffff;
+  --title-shadow: #e46aa6;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #bfe3ff;
+  /* Stop iPad Safari from scrolling, zooming or selecting text during swipes. */
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app {
+  position: fixed;
+  inset: 0;
+  height: 100dvh;
+}
+
+.scene {
+  position: absolute !important;
+  inset: 0;
+}
+
+.title-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: calc(env(safe-area-inset-top) + 8vh) 16px 0;
+  pointer-events: none;
+}
+
+.title {
+  margin: 0;
+  font-family: 'Trebuchet MS', 'Avenir Next', system-ui, sans-serif;
+  font-size: clamp(28px, 7vw, 72px);
+  font-weight: 800;
+  text-align: center;
+  color: var(--title-color);
+  text-shadow:
+    0 3px 0 var(--title-shadow),
+    0 6px 18px rgba(0, 0, 0, 0.18);
+}
