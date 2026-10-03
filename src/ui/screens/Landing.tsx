@@ -3,6 +3,7 @@ import { SCREENS } from '../../config';
 import { CHARACTERS } from '../../game/catalogue';
 import { useAssetStore } from '../../store/assetStore';
 import { useGameStore, useSession } from '../../store/gameStore';
+import { SettingsToggles } from '../SettingsToggles';
 import { usePresence } from '../usePresence';
 
 const ART = `${import.meta.env.BASE_URL}ui/landing/`;
@@ -61,6 +62,9 @@ export function Landing() {
       </div>
       <div className="landing-stars" aria-label="Total stars">
         ★ {session.save.totalStars.toLocaleString('en')}
+      </div>
+      <div className="landing-settings">
+        <SettingsToggles compact />
       </div>
       <h1 className="landing-title">Magical Valley Adventures</h1>
       <button

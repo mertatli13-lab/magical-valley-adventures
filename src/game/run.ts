@@ -8,6 +8,7 @@ import {
   type BarrierType,
 } from './barriers';
 import { sweptOverlapZ, touchesBarrier } from './collision';
+import { CueFeed } from './cues';
 import { baseSpeedAt, effectiveSpeed, gapTimeFor, tierAt } from './difficulty';
 import { createGround, resetGround, stepGround, type GroundState } from './ground';
 import { InputBuffer } from './input';
@@ -67,6 +68,8 @@ export interface RunState {
   stars: StarPool;
   spawner: SpawnerState;
   input: InputBuffer;
+  /** Cues for sound and effects. Never reset, so readers can track it across runs. */
+  cues: CueFeed;
 }
 
 export function createRun(seed: number = SPAWNER.DEFAULT_SEED): RunState {
@@ -98,6 +101,7 @@ export function createRun(seed: number = SPAWNER.DEFAULT_SEED): RunState {
     stars: createStarPool(),
     spawner: createSpawner(seed),
     input: new InputBuffer(),
+    cues: new CueFeed(),
   };
   return run;
 }
@@ -143,7 +147,11 @@ function onHit(run: RunState, barrier: Barrier): void {
   run.lastHitX = barrier.x;
   run.lastHitZ = barrier.z;
   barrier.active = false;
-  if (run.hearts === 0) run.status = 'OUT';
+  run.cues.push('hit', run.time, barrier.x, run.player.y, barrier.z);
+  if (run.hearts === 0) {
+    run.status = 'OUT';
+    run.cues.push('out', run.time, run.player.x);
+  }
 }
 
 /** Checks every active barrier the player's box was swept across this frame (A6). */
@@ -180,6 +188,7 @@ function collectStars(run: RunState, distance: number): void {
     run.starsCollected++;
     run.collectedRate.add(run.time, 1);
     pushCollect(run.collectFeed, star);
+    run.cues.push(star.big ? 'bigStar' : 'star', run.time, star.x, star.y, star.z);
   }
 }
 
@@ -199,7 +208,7 @@ export function stepRun(run: RunState, realDt: number, now: number): void {
   const distance = run.speed * dt;
   run.distance += distance;
   run.reviveClearRemaining = Math.max(0, run.reviveClearRemaining - distance);
-  updatePlayer(run.player, run.input, now, dt);
+  updatePlayer(run.player, run.input, now, dt, run.cues, run.time);
   stepGround(run.ground, distance);
   moveBarriers(run.barriers, distance);
   moveStars(run.stars, distance);

@@ -1,4 +1,5 @@
 import { useFrame } from '@react-three/fiber';
+import { updateAudio } from '../audio/audioDirector';
 import { DEBUG } from '../config';
 import { useGameStore } from '../store/gameStore';
 import { nowSeconds } from '../ui/useControls';
@@ -14,6 +15,7 @@ export function RunLoop() {
     stats.drawCalls = gl.info.render.calls;
     stats.triangles = gl.info.render.triangles;
     session.update(delta, nowSeconds());
+    updateAudio(session);
     sync();
   }, SIMULATION_PRIORITY);
   return null;

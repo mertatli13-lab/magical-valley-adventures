@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { audio } from '../audio/audioEngine';
 import { DEBUG } from '../config';
 import { keyToAction, swipeToAction } from '../game/input';
 import { useGameStore } from '../store/gameStore';
@@ -19,7 +20,8 @@ export function nowSeconds(): number {
  *   character to the front, like the arrow key on the right.
  * - Shop: Escape goes back.
  * Buttons on each screen handle taps, Enter and Space themselves.
- * The run also pauses when the browser tab is hidden.
+ * The run also pauses, and sound stops, when the browser tab is hidden.
+ * The first tap or key press unlocks sound.
  */
 export function useControls(): void {
   useEffect(() => {
@@ -90,7 +92,20 @@ export function useControls(): void {
     const onTouchMove = (event: TouchEvent) => event.preventDefault();
 
     const onVisibilityChange = () => {
-      if (document.hidden) act((s) => s.pause());
+      if (document.hidden) {
+        act((s) => s.pause());
+        audio.suspend();
+      } else {
+        audio.resume();
+      }
+    };
+
+    // Sound may only start after the player's first tap or key press (browser rule).
+    const onGesture = () => audio.unlock();
+    // Every enabled button clicks.
+    const onClick = (event: MouseEvent) => {
+      const button = (event.target as Element | null)?.closest?.('button');
+      if (button && !button.disabled) audio.play('button');
     };
 
     window.addEventListener('keydown', onKeyDown);
@@ -99,7 +114,15 @@ export function useControls(): void {
     window.addEventListener('touchcancel', onTouchCancel, { passive: true });
     window.addEventListener('touchmove', onTouchMove, { passive: false });
     document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('touchend', onGesture, { passive: true });
+    window.addEventListener('pointerup', onGesture, { passive: true });
+    window.addEventListener('keydown', onGesture);
+    window.addEventListener('click', onClick);
     return () => {
+      window.removeEventListener('touchend', onGesture);
+      window.removeEventListener('pointerup', onGesture);
+      window.removeEventListener('keydown', onGesture);
+      window.removeEventListener('click', onClick);
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchend', onTouchEnd);

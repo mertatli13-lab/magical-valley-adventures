@@ -1,4 +1,5 @@
 import { JUMP, LANE_CHANGE_IN_AIR, LANE_CHANGE_TIME, LANES, PLAYER, SLIDE } from '../config';
+import type { CueFeed } from './cues';
 import type { Action, InputBuffer } from './input';
 import { clamp, moveToward } from './math';
 
@@ -79,8 +80,9 @@ export function applyAction(player: PlayerState, action: Action): void {
   player.lastAction = action;
 }
 
-/** Advances lane movement, jump physics and timers by dt seconds. */
-export function stepPlayer(player: PlayerState, dt: number): void {
+/** Advances lane movement, jump physics and timers by dt seconds. Returns true on the frame the hero lands. */
+export function stepPlayer(player: PlayerState, dt: number): boolean {
+  let landed = false;
   player.x = moveToward(player.x, laneX(player.lane), (LANES.WIDTH / LANE_CHANGE_TIME) * dt);
 
   if (!isOnGround(player)) {
@@ -92,23 +94,33 @@ export function stepPlayer(player: PlayerState, dt: number): void {
     if (player.y <= 0) {
       player.y = 0;
       player.vy = 0;
+      landed = true;
     }
   }
 
   player.slideTimer = Math.max(0, player.slideTimer - dt);
   player.height = isSliding(player) ? PLAYER.SLIDE_HEIGHT : PLAYER.STAND_HEIGHT;
   player.safeTimer = Math.max(0, player.safeTimer - dt);
+  return landed;
 }
 
 /**
  * One controller frame: plays the buffered action if it is allowed now
  * (otherwise it stays buffered until it is allowed or expires), then steps.
  */
-export function updatePlayer(player: PlayerState, buffer: InputBuffer, now: number, dt: number): void {
+export function updatePlayer(
+  player: PlayerState,
+  buffer: InputBuffer,
+  now: number,
+  dt: number,
+  cues?: CueFeed,
+  cueTime = 0,
+): void {
   const action = buffer.peek(now);
   if (action !== null && canPerform(player, action)) {
     applyAction(player, action);
     buffer.consume();
+    cues?.push(action === 'JUMP' ? 'jump' : action === 'SLIDE' ? 'slide' : 'swipe', cueTime, player.x, player.y);
   }
-  stepPlayer(player, dt);
+  if (stepPlayer(player, dt)) cues?.push('land', cueTime, player.x, 0);
 }

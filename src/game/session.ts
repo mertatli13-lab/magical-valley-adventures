@@ -152,6 +152,7 @@ export class Session {
     this.result.bestRun = this.save.bestRun;
     this.result.totalStars = this.save.totalStars;
     this.result.newBest = collected > previousBest;
+    if (this.result.newBest) this.run.cues.push('newBest', this.run.time);
   }
 
   pause(): void {
@@ -188,6 +189,7 @@ export class Session {
     this.persist();
     this.revivesThisRun++;
     reviveRun(this.run);
+    this.run.cues.push('revive', this.run.time, this.run.player.x);
     this.machine.send('REVIVE');
     this.changed();
     return true;
@@ -250,6 +252,7 @@ export class Session {
     this.save.totalStars -= priceOf(kind, id) ?? 0;
     if (kind === 'character') this.save.owned.characters.push(id as CharacterId);
     else this.ownedList(kind).push(id);
+    this.run.cues.push('purchase', this.run.time);
     this.persist();
     this.changed();
     return true;
@@ -301,6 +304,13 @@ export class Session {
   get activeMove(): SignatureMoveInfo | undefined {
     const move = moveFor(this.save.equipped.character);
     return move && this.isMoveOn(move.id) ? move : undefined;
+  }
+
+  /** Music, sound and reduce-motion toggles (saved on every change). */
+  setSetting(setting: keyof SaveData['settings'], on: boolean): void {
+    this.save.settings[setting] = on;
+    this.persist();
+    this.changed();
   }
 
   /** Saves after a direct change to `save` and lets the screens update. */

@@ -9,7 +9,8 @@ export interface SaveData {
   owned: { characters: CharacterId[]; accessories: string[]; moves: string[] };
   /** `moves` maps a signature move id to whether it is switched on for its character. */
   equipped: { character: CharacterId; accessory: string | null; moves: Record<string, boolean> };
-  settings: { music: boolean; sound: boolean };
+  /** reduceMotion turns off camera shake and speed lines. Added after A8; older saves get false. */
+  settings: { music: boolean; sound: boolean; reduceMotion: boolean };
 }
 
 /** The part of localStorage the game uses, so tests can pass an in-memory store. */
@@ -25,7 +26,7 @@ export function defaultSave(): SaveData {
     bestRun: 0,
     owned: { characters: [...FREE_CHARACTERS], accessories: [], moves: [] },
     equipped: { character: DEFAULT_CHARACTER, accessory: null, moves: {} },
-    settings: { music: true, sound: true },
+    settings: { music: true, sound: true, reduceMotion: false },
   };
 }
 
@@ -71,7 +72,8 @@ export function parseSave(raw: string | null): SaveData {
     !isBooleanRecord(equipped.moves) ||
     !isRecord(settings) ||
     typeof settings.music !== 'boolean' ||
-    typeof settings.sound !== 'boolean'
+    typeof settings.sound !== 'boolean' ||
+    !(settings.reduceMotion === undefined || typeof settings.reduceMotion === 'boolean')
   ) {
     return defaultSave();
   }
@@ -91,7 +93,7 @@ export function parseSave(raw: string | null): SaveData {
     bestRun: data.bestRun,
     owned: { characters, accessories, moves },
     equipped: { character, accessory, moves: movesOn },
-    settings: { music: settings.music, sound: settings.sound },
+    settings: { music: settings.music, sound: settings.sound, reduceMotion: settings.reduceMotion === true },
   };
 }
 

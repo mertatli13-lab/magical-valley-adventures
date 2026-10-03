@@ -3,6 +3,7 @@ export * from './animation';
 export * from './barriers';
 export * from './catalogue';
 export * from './collision';
+export * from './cues';
 export * from './difficulty';
 export * from './economy';
 export * from './ground';

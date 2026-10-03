@@ -4,14 +4,16 @@ import { CAMERA, RENDER, SCREENS } from '../config';
 import { Barriers } from './Barriers';
 import { Director } from './Director';
 import { Forest } from './Forest';
+import { DustPuff } from './DustPuff';
 import { Ground } from './Ground';
 import { Particles } from './Particles';
-import { HitPop } from './HitPop';
 import { Player } from './Player';
 import { RunLoop } from './RunLoop';
 import { RunWorld } from './RunWorld';
 import { Scenery } from './Scenery';
 import { Sky } from './Sky';
+import { SpeedLines } from './SpeedLines';
+import { Sprinkles } from './Sprinkles';
 import { StarPops } from './StarPops';
 import { Stars } from './Stars';
 
@@ -42,7 +44,9 @@ export function GameScene() {
           <Barriers />
           <Stars />
           <StarPops />
-          <HitPop />
+          <Sprinkles />
+          <DustPuff />
+          <SpeedLines />
           <Player />
         </RunWorld>
       )}

@@ -290,6 +290,8 @@ export const POOLS = {
   GROUND_CHUNKS: 6,
   /** Recent star pickups kept for the pop effect. */
   COLLECT_EVENTS: 16,
+  /** Recent game cues (jump, hit, star...) kept for sound and effects. */
+  CUES: 32,
 } as const;
 
 export const GROUND = {
@@ -356,11 +358,7 @@ export const RENDER = {
   /** Pop when a star is collected. */
   STAR_POP_DURATION: 0.25,
   STAR_POP_END_SCALE: 2.2,
-  /** Pop effect when a barrier is hit. */
-  POP_COLOR: '#fff2a8',
-  POP_DURATION: 0.35,
-  POP_START_SCALE: 0.5,
-  POP_END_SCALE: 2.5,
+  /** Sphere detail for the star sparkle. */
   POP_SEGMENTS: 16,
   /** Fog is complete before the spawn point (126.5 m from the camera), so nothing pops into view. */
   FOG_NEAR: 45,
@@ -586,6 +584,72 @@ export const VALLEY = {
   PARTICLE_BOB: 0.4,
   PARTICLE_BOB_RATE: 2,
   SEED: 11,
+} as const;
+
+// ---------------------------------------------------------------------------
+// Sound and effects (Phase 7)
+// ---------------------------------------------------------------------------
+
+export const AUDIO = {
+  /** Star pickups in quick succession rise by this many semitones each... */
+  STAR_PITCH_STEP: 1,
+  /** ...up to this many steps... */
+  STAR_PITCH_MAX_STEPS: 12,
+  /** ...and start again after this many seconds without a star. */
+  STAR_CHAIN_RESET: 1,
+  MUSIC_VOLUME: 0.5,
+  SOUND_VOLUME: 0.9,
+  /** Music is quieter while paused. */
+  PAUSED_MUSIC_FACTOR: 0.35,
+  /** Seconds to fade between the menu and run tracks, or a toggle. */
+  MUSIC_FADE: 0.6,
+} as const;
+
+export const EFFECTS = {
+  /** Sprinkle burst on a hit. */
+  SPRINKLE_COUNT: 28,
+  SPRINKLE_LIFE: 0.7,
+  /** Sideways and upward launch speeds (m/s), random within these ranges. */
+  SPRINKLE_SPEED_MIN: 2,
+  SPRINKLE_SPEED: 5,
+  SPRINKLE_UP_MIN: 2,
+  SPRINKLE_UP: 6,
+  /** Launch height above the hero's feet. */
+  SPRINKLE_START_Y: 0.4,
+  /** Fastest tumble (radians per second). */
+  SPRINKLE_SPIN: 12,
+  SPRINKLE_GRAVITY: 14,
+  SPRINKLE_SIZE: [0.06, 0.06, 0.22],
+  SPRINKLE_COLORS: ['#ff8fc7', '#ffd27a', '#9fe7ff', '#c9a7ff', '#b8f0d8', '#ffffff'],
+  /** Speed lines above this speed (m/s), fully visible at the top speed. */
+  SPEED_LINES_FROM: 24,
+  SPEED_LINE_COUNT: 36,
+  SPEED_LINE_LENGTH: 3,
+  SPEED_LINE_WIDTH: 0.03,
+  SPEED_LINE_MIN_X: 2.5,
+  SPEED_LINE_MAX_X: 6,
+  SPEED_LINE_MIN_Y: 0.4,
+  SPEED_LINE_MAX_Y: 4.5,
+  /** Lines live between these z values, close to the camera. */
+  SPEED_LINE_FAR_Z: -40,
+  SPEED_LINE_NEAR_Z: 7,
+  /** Lines move this many times faster than the world, to read as streaks. */
+  SPEED_LINE_RUSH: 1.6,
+  SPEED_LINE_OPACITY: 0.55,
+  /** Camera shake on a hit: this many frames, this far (metres). */
+  SHAKE_FRAMES: 3,
+  SHAKE_AMOUNT: 0.18,
+  /** Dust puff on landing. */
+  DUST_COUNT: 10,
+  DUST_LIFE: 0.4,
+  /** How far the dust spreads sideways and along the track, and how much it rises. */
+  DUST_SPREAD_X: 1.4,
+  DUST_SPREAD_Z: 0.7,
+  DUST_RISE: 0.3,
+  DUST_START_Y: 0.1,
+  DUST_SIZE: 0.75,
+  DUST_COLOR: '#cfa3b8',
+  SEED: 23,
 } as const;
 
 export const DEBUG = {

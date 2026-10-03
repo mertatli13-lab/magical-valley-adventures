@@ -1,12 +1,12 @@
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
-import { MeshBasicMaterial, SphereGeometry, type Mesh } from 'three';
+import { AdditiveBlending, MeshBasicMaterial, SphereGeometry, type Mesh } from 'three';
 import { POOLS, RENDER } from '../config';
 import { useGameStore } from '../store/gameStore';
 
 const POP_INDICES = Array.from({ length: POOLS.COLLECT_EVENTS }, (_, i) => i);
 
-/** A small pop for every star pickup, from a fixed pool of spheres. */
+/** A small glowing sparkle for every star pickup, from a fixed pool of spheres. */
 export function StarPops() {
   const meshes = useRef<(Mesh | null)[]>([]);
   const ages = useRef(new Float64Array(POOLS.COLLECT_EVENTS).fill(RENDER.STAR_POP_DURATION));
@@ -15,7 +15,8 @@ export function StarPops() {
     () => ({
       geometry: new SphereGeometry(RENDER.STAR_RADIUS, RENDER.POP_SEGMENTS, RENDER.POP_SEGMENTS),
       materials: POP_INDICES.map(
-        () => new MeshBasicMaterial({ color: RENDER.STAR_COLOR, transparent: true, depthWrite: false }),
+        () =>
+          new MeshBasicMaterial({ color: RENDER.STAR_COLOR, transparent: true, depthWrite: false, blending: AdditiveBlending }),
       ),
     }),
     [],

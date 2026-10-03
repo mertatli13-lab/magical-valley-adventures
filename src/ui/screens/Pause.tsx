@@ -1,4 +1,5 @@
 import { useGameStore, useSession } from '../../store/gameStore';
+import { SettingsToggles } from '../SettingsToggles';
 
 export function Pause() {
   const session = useSession();
@@ -17,6 +18,7 @@ export function Pause() {
         <button type="button" className="secondary-button" onClick={() => act((s) => s.home())}>
           Home
         </button>
+        <SettingsToggles />
       </div>
     </div>
   );

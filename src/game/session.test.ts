@@ -265,8 +265,15 @@ describe('save (A8)', () => {
       bestRun: 0,
       owned: { characters: ['strawberry', 'ginza'], accessories: [], moves: [] },
       equipped: { character: 'strawberry', accessory: null, moves: {} },
-      settings: { music: true, sound: true },
+      settings: { music: true, sound: true, reduceMotion: false },
     });
+  });
+
+  it('loads a save in the original A8 format (before the reduce-motion setting)', () => {
+    const original = { ...defaultSave(), totalStars: 9, settings: { music: false, sound: true } };
+    const save = parseSave(JSON.stringify(original));
+    expect(save.totalStars).toBe(9);
+    expect(save.settings).toEqual({ music: false, sound: true, reduceMotion: false });
   });
 
   it.each([

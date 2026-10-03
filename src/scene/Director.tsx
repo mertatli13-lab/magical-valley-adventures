@@ -1,7 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { Color, Fog, Vector3, type DirectionalLight, type HemisphereLight } from 'three';
-import { CAMERA, LIGHTING, NIGHT, RENDER, SCREENS } from '../config';
+import { CAMERA, EFFECTS, LIGHTING, NIGHT, RENDER, SCREENS } from '../config';
 import type { Screen } from '../game/machine';
 import { frameDt } from '../game/run';
 import { useGameStore } from '../store/gameStore';
@@ -48,6 +48,7 @@ export function Director() {
   const followX = useRef(0);
   // The shop covers the screen; keep the scene as it was on the screen it was opened from.
   const sceneScreen = useRef<Screen>('LANDING');
+  const shake = useRef({ frames: 0, seenHits: 0 });
 
   useLayoutEffect(() => {
     scene.background = v.sky;
@@ -104,6 +105,18 @@ export function Director() {
     camera.position.lerpVectors(v.fromPosition, v.targetPosition, s);
     v.look.lerpVectors(v.fromLook, v.targetLook, s);
     camera.lookAt(v.look);
+
+    // A short shake on a hit: a few frames, off with "reduce motion".
+    const { run } = session;
+    if (run.hitCount !== shake.current.seenHits) {
+      if (run.hitCount > shake.current.seenHits && !session.save.settings.reduceMotion) shake.current.frames = EFFECTS.SHAKE_FRAMES;
+      shake.current.seenHits = run.hitCount;
+    }
+    if (shake.current.frames > 0 && session.screen !== 'PAUSE') {
+      shake.current.frames--;
+      camera.position.x += (Math.random() * 2 - 1) * EFFECTS.SHAKE_AMOUNT;
+      camera.position.y += (Math.random() * 2 - 1) * EFFECTS.SHAKE_AMOUNT;
+    }
   });
 
   return (
