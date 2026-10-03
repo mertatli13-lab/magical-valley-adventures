@@ -362,8 +362,11 @@ export const RENDER = {
   POP_START_SCALE: 0.5,
   POP_END_SCALE: 2.5,
   POP_SEGMENTS: 16,
-  FOG_NEAR: 60,
-  FOG_FAR: 130,
+  /** Fog is complete before the spawn point (126.5 m from the camera), so nothing pops into view. */
+  FOG_NEAR: 45,
+  FOG_FAR: 118,
+  /** Day fog matches the sky dome's horizon. */
+  FOG_COLOR: '#ffe6f2',
   AMBIENT_INTENSITY: 1.1,
   SUN_INTENSITY: 1.2,
   SUN_POSITION: [5, 10, 5],
@@ -503,6 +506,86 @@ export const MOVE_LOOKS = {
   RAINBOW: ['#ff5252', '#ffa726', '#ffee58', '#66bb6a', '#42a5f5', '#7e57c2', '#ec407a'],
   SPARKLE_COLOR: '#fff59d',
   SEGMENTS: 8,
+} as const;
+
+// ---------------------------------------------------------------------------
+// Art (Phase 6): models, lighting, valley
+// ---------------------------------------------------------------------------
+
+export const MODELS = {
+  /** Cross-fade between animation clips (seconds). */
+  CROSSFADE: 0.1,
+  /** Run clip playback rate: 1.0 at the start speed, 1.6 at the top speed. */
+  RUN_RATE_MIN: 1,
+  RUN_RATE_MAX: 1.6,
+  /** How long the Hit clip plays after a hit (asset spec: 0.5 s). */
+  HIT_CLIP_TIME: 0.5,
+  /** Blender exports face +z, toward the camera; turn them to run away from it. */
+  FACES_CAMERA: true,
+  FACE_AWAY_YAW: Math.PI,
+  /** Files downloaded at once while loading. */
+  PARALLEL_LOADS: 6,
+} as const;
+
+export const LIGHTING = {
+  /** Bright pastel daylight: a hemisphere light plus one soft directional light. */
+  HEMI_SKY_COLOR: '#fff6fb',
+  HEMI_GROUND_COLOR: '#d9c4ff',
+  HEMI_DAY_INTENSITY: 1.6,
+  HEMI_NIGHT_INTENSITY: 0.45,
+  SUN_COLOR: '#fff1d6',
+} as const;
+
+export const BLOB_SHADOW = {
+  RADIUS: 0.5,
+  OPACITY: 0.35,
+  /** The shadow shrinks and fades as the hero rises: gone at this height. */
+  FADE_HEIGHT: 3,
+  LIFT: 0.03,
+  TEXTURE_SIZE: 64,
+} as const;
+
+export const VALLEY = {
+  /** Side scenery per 40 m ground chunk, recycled with the chunk. */
+  SCENERY_PER_CHUNK: 10,
+  /** Scenery stays at least 5 m from the centre line (asset spec). */
+  SCENERY_MIN_X: 5.5,
+  SCENERY_MAX_X: 13,
+  SCENERY_MIN_SCALE: 0.8,
+  SCENERY_MAX_SCALE: 1.3,
+  /** Grass on each side of the path, beyond the 10 m ground chunk. */
+  GRASS_WIDTH: 40,
+  GRASS_COLOR: '#c8f0d0',
+  /** Placeholder scenery: pastel trees, mushrooms and flowers. */
+  TREE_TRUNK: [0.15, 1.2],
+  TREE_CROWN: 0.9,
+  MUSHROOM_STEM: [0.15, 0.5],
+  MUSHROOM_CAP: 0.4,
+  FLOWER_SIZE: 0.18,
+  TRUNK_COLOR: '#c9a27e',
+  STEM_COLOR: '#fff3e0',
+  CROWN_COLORS: ['#d7b8ff', '#b8f0d8', '#ffc9e3'],
+  CAP_COLORS: ['#ff9ec7', '#ffd27a', '#b8a6ff'],
+  FLOWER_COLORS: ['#ff8fc7', '#fff07a', '#9fe7ff', '#ffffff'],
+  SEGMENTS: 10,
+  /** Sky dome: gradient sphere around the camera when there is no sky model. */
+  SKY_RADIUS: 170,
+  SKY_TOP_COLOR: '#8fd0ff',
+  SKY_HORIZON_COLOR: '#ffe6f2',
+  /** Butterflies and sparkles drifting over the valley, scrolling with the world. */
+  BUTTERFLY_COUNT: 40,
+  BUTTERFLY_SIZE: 0.35,
+  BUTTERFLY_COLORS: ['#ff8fc7', '#c9a7ff', '#ffd27a'],
+  SPARKLE_COUNT: 120,
+  SPARKLE_SIZE: 0.12,
+  SPARKLE_COLOR: '#ffffff',
+  PARTICLE_MIN_X: 3,
+  PARTICLE_MAX_X: 14,
+  PARTICLE_MIN_Y: 0.5,
+  PARTICLE_MAX_Y: 6,
+  PARTICLE_BOB: 0.4,
+  PARTICLE_BOB_RATE: 2,
+  SEED: 11,
 } as const;
 
 export const DEBUG = {

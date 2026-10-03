@@ -17,7 +17,12 @@ import { frameDt } from '../game/run';
 import { Random } from '../game/random';
 import { useGameStore } from '../store/gameStore';
 import { stageTags } from '../store/stageTags';
+import { CHARACTER_MODELS } from './assetManifest';
+import { getModel } from './assets';
+import { BlobShadow } from './BlobShadow';
+import { CharacterModel, type CharacterFrame } from './CharacterModel';
 import { mood } from './mood';
+import { radialTexture } from './textures';
 
 const RADIUS = PLAYER.HALF_WIDTH;
 const BODY_LENGTH = PLAYER.STAND_HEIGHT - 2 * RADIUS;
@@ -49,6 +54,19 @@ function Stage() {
  */
 function StageCharacters() {
   const tag = useMemo(() => new Vector3(), []);
+  const models = useMemo(() => CHARACTERS.map((c) => getModel(CHARACTER_MODELS[c.id])), []);
+  // One reusable frame state per character for its model.
+  const frames = useMemo<CharacterFrame[]>(
+    () =>
+      CHARACTERS.map(() => ({
+        pose: { pose: 'idle', airborne: false, sliding: false, hitAge: Infinity, signature: null },
+        speed: 0,
+        frozen: false,
+        dark: false,
+        accessory: null,
+      })),
+    [],
+  );
   const groups = useRef<(Group | null)[]>([]);
   const meshes = useRef<(Mesh | null)[]>([]);
   const angle = useRef(-useGameStore.getState().session.selection * STEP_ANGLE);
@@ -72,7 +90,7 @@ function StageCharacters() {
       const character = CHARACTERS[i];
       const group = groups.current[i];
       const mesh = meshes.current[i];
-      if (!character || !group || !mesh) continue;
+      if (!character || !group) continue;
       const goal = character.id === selected ? 1 : 0;
       const w = (focus.current[i] ?? 0) + (goal - (focus.current[i] ?? 0)) * (1 - Math.exp(-STAGE.FOCUS_RATE * dt));
       focus.current[i] = w;
@@ -82,7 +100,13 @@ function StageCharacters() {
       const y = STAGE_TOP + (PODIUM_TOP - STAGE_TOP) * w + Math.sin(Math.PI * w) * STAGE.HOP_HEIGHT;
       group.position.set(ringX * (1 - w), y, ringZ * (1 - w));
       const owned = s.owns(character);
-      mesh.material = owned ? (materials.colors[i] ?? materials.locked) : materials.locked;
+      if (mesh) mesh.material = owned ? (materials.colors[i] ?? materials.locked) : materials.locked;
+      const state = frames[i];
+      if (state) {
+        state.pose.pose = character.id === selected ? 'focus' : 'idle';
+        state.dark = !owned;
+        state.accessory = owned ? s.save.equipped.accessory : null;
+      }
       // Where this character's price tag goes on screen.
       tag.set(group.position.x, group.position.y + TAG_HEIGHT, group.position.z).project(camera);
       stageTags.x[i] = (tag.x * 0.5 + 0.5) * size.width;
@@ -95,9 +119,14 @@ function StageCharacters() {
     <>
       {CHARACTERS.map((character, i) => (
         <group key={character.id} ref={(group) => void (groups.current[i] = group)}>
-          <mesh ref={(mesh) => void (meshes.current[i] = mesh)} position-y={PLAYER.STAND_HEIGHT / 2}>
-            <capsuleGeometry args={[RADIUS, BODY_LENGTH, RENDER.PLAYER_CAP_SEGMENTS, RENDER.PLAYER_RADIAL_SEGMENTS]} />
-          </mesh>
+          {models[i] ? (
+            <CharacterModel gltf={models[i]} name={character.id} frame={() => frames[i] as CharacterFrame} />
+          ) : (
+            <mesh ref={(mesh) => void (meshes.current[i] = mesh)} position-y={PLAYER.STAND_HEIGHT / 2}>
+              <capsuleGeometry args={[RADIUS, BODY_LENGTH, RENDER.PLAYER_CAP_SEGMENTS, RENDER.PLAYER_RADIAL_SEGMENTS]} />
+            </mesh>
+          )}
+          <BlobShadow />
         </group>
       ))}
     </>
@@ -169,7 +198,7 @@ function Fireflies() {
 
   return (
     <points ref={points} geometry={geometry}>
-      <pointsMaterial color={NIGHT.FIREFLY_COLOR} size={NIGHT.FIREFLY_SIZE} transparent depthWrite={false} />
+      <pointsMaterial color={NIGHT.FIREFLY_COLOR} size={NIGHT.FIREFLY_SIZE} map={radialTexture()} transparent depthWrite={false} />
     </points>
   );
 }

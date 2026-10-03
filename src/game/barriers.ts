@@ -9,6 +9,8 @@ export interface Barrier {
   /** Centre of the barrier along z. */
   z: number;
   halfWidth: number;
+  /** Increases with every spawn; the scene uses it to pick a model variant. Cosmetic only. */
+  serial: number;
 }
 
 /** Fixed pool of barriers, created once at load (A8). */
@@ -16,14 +18,16 @@ export interface BarrierPool {
   items: Barrier[];
   /** Barriers that could not spawn because the pool was full. */
   dropped: number;
+  /** Spawns so far, for barrier serial numbers. */
+  spawned: number;
 }
 
 export function createBarrierPool(): BarrierPool {
   const items: Barrier[] = [];
   for (let i = 0; i < POOLS.BARRIERS; i++) {
-    items.push({ active: false, type: 'L', x: 0, z: 0, halfWidth: 0 });
+    items.push({ active: false, type: 'L', x: 0, z: 0, halfWidth: 0, serial: 0 });
   }
-  return { items, dropped: 0 };
+  return { items, dropped: 0, spawned: 0 };
 }
 
 export function resetBarrierPool(pool: BarrierPool): void {
@@ -47,6 +51,7 @@ export function spawnBarrier(
     barrier.x = x;
     barrier.z = z;
     barrier.halfWidth = halfWidth;
+    barrier.serial = pool.spawned++;
     return barrier;
   }
   pool.dropped++;

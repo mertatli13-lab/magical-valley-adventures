@@ -5,6 +5,11 @@ import { Session } from '../game/session';
 /** Live frame statistics written by the render loop, read by the debug panel. */
 export interface FrameStats {
   fps: number;
+  /** Renderer counts from the last frame (debug panel). */
+  drawCalls: number;
+  triangles: number;
+  /** The hero model's current clip, or empty for the placeholder. */
+  heroClip: string;
 }
 
 /** A fresh seed per run in the app; tests use fixed seeds to replay runs. */
@@ -44,7 +49,7 @@ interface GameStore {
 export const useGameStore = create<GameStore>((set, get) => ({
   session: new Session(browserStorage(), newSeed),
   version: 0,
-  stats: { fps: 0 },
+  stats: { fps: 0, drawCalls: 0, triangles: 0, heroClip: '' },
   forcedTier: null,
   debugVisible: false,
   act: (action) => {

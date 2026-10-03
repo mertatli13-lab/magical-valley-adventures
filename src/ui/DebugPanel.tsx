@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { DEBUG, SPAWNER } from '../config';
 import { activeBarrierCount } from '../game/barriers';
 import { addStarsForTesting } from '../game/debug';
+import { useAssetStore } from '../store/assetStore';
 import { useGameStore } from '../store/gameStore';
 
 interface Snapshot {
@@ -18,6 +19,10 @@ interface Snapshot {
   stars: number;
   placed: string;
   collected: string;
+  drawCalls: number;
+  triangles: string;
+  clip: string;
+  missing: string;
 }
 
 function readSnapshot(): Snapshot {
@@ -39,6 +44,10 @@ function readSnapshot(): Snapshot {
     stars: run.runStarsCollected,
     placed: run.placedRate.perMinute(run.time).toFixed(0),
     collected: run.collectedRate.perMinute(run.time).toFixed(0),
+    drawCalls: stats.drawCalls,
+    triangles: stats.triangles.toLocaleString('en'),
+    clip: stats.heroClip || 'placeholder',
+    missing: `${useAssetStore.getState().missing.length}/${useAssetStore.getState().total}`,
   };
 }
 
@@ -55,6 +64,7 @@ export function DebugPanel() {
 
   useEffect(() => {
     if (!visible) return;
+    setSnapshot(readSnapshot()); // fresh numbers as soon as the panel opens
     const id = window.setInterval(() => setSnapshot(readSnapshot()), DEBUG.REFRESH_MS);
     return () => window.clearInterval(id);
   }, [visible]);
@@ -64,6 +74,14 @@ export function DebugPanel() {
     <dl className="debug-panel">
       <dt>fps</dt>
       <dd>{snapshot.fps}</dd>
+      <dt>draw calls</dt>
+      <dd>{snapshot.drawCalls}</dd>
+      <dt>triangles</dt>
+      <dd>{snapshot.triangles}</dd>
+      <dt>hero clip</dt>
+      <dd>{snapshot.clip}</dd>
+      <dt>models missing</dt>
+      <dd>{snapshot.missing}</dd>
       <dt>time</dt>
       <dd>{snapshot.time} s</dd>
       <dt>speed</dt>

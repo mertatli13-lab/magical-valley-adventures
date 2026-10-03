@@ -1,4 +1,5 @@
 // Game logic: plain TypeScript with no React or three.js imports.
+export * from './animation';
 export * from './barriers';
 export * from './catalogue';
 export * from './collision';

@@ -1,8 +1,11 @@
 import { useFrame } from '@react-three/fiber';
-import { useLayoutEffect, useMemo, useRef } from 'react';
-import { Color, ExtrudeGeometry, MeshBasicMaterial, Object3D, Shape, type InstancedMesh } from 'three';
+import { useMemo } from 'react';
+import { ExtrudeGeometry, Matrix4, Mesh, MeshBasicMaterial, Quaternion, Shape, Vector3 } from 'three';
 import { POOLS, RENDER } from '../config';
 import { useGameStore } from '../store/gameStore';
+import { STAR_MODEL } from './assetManifest';
+import { getModel } from './assets';
+import { InstancedModel } from './instancing';
 
 /** A flat five-point star, extruded and centred. Built once. */
 function createStarGeometry(): ExtrudeGeometry {
@@ -22,54 +25,57 @@ function createStarGeometry(): ExtrudeGeometry {
   return geometry;
 }
 
-/**
- * All pooled stars in one instanced mesh (one draw call). Each frame the
- * active stars are packed into the first instances and the rest are hidden by
- * lowering the instance count.
- */
-export function Stars() {
-  const mesh = useRef<InstancedMesh>(null);
-  const { geometry, material, dummy, color, bigColor } = useMemo(
-    () => ({
-      geometry: createStarGeometry(),
-      // Unlit, so stars read as flat glowing colour (Blender asset spec).
-      material: new MeshBasicMaterial({ color: '#ffffff' }),
-      dummy: new Object3D(),
-      color: new Color(RENDER.STAR_COLOR),
-      bigColor: new Color(RENDER.BIG_STAR_COLOR),
-    }),
-    [],
-  );
+/** The star and big star: from star.glb ("Star" and "BigStar" nodes) or the placeholder shape. */
+function starModels(): { small: InstancedModel; big: InstancedModel; real: boolean } {
+  const model = getModel(STAR_MODEL);
+  const smallNode = model?.scene.getObjectByName('Star');
+  if (model && smallNode) {
+    const bigNode = model.scene.getObjectByName('BigStar');
+    return {
+      small: new InstancedModel(smallNode, POOLS.STARS),
+      big: new InstancedModel(bigNode ?? smallNode, POOLS.STARS),
+      real: bigNode !== undefined,
+    };
+  }
+  if (model) console.warn(`[assets] ${STAR_MODEL} has no "Star" node; using the placeholder.`);
+  const geometry = createStarGeometry();
+  // Unlit, so stars read as flat glowing colour (Blender asset spec).
+  return {
+    small: new InstancedModel(new Mesh(geometry, new MeshBasicMaterial({ color: RENDER.STAR_COLOR })), POOLS.STARS),
+    big: new InstancedModel(new Mesh(geometry, new MeshBasicMaterial({ color: RENDER.BIG_STAR_COLOR })), POOLS.STARS),
+    real: false,
+  };
+}
 
-  // Create the per-instance colour buffer once, before the first frame.
-  useLayoutEffect(() => {
-    const stars = mesh.current;
-    if (!stars) return;
-    for (let i = 0; i < POOLS.STARS; i++) stars.setColorAt(i, color);
-    stars.count = 0;
-  }, [color]);
+/** All pooled stars, spinning: one instanced model for stars and one for big stars. */
+export function Stars() {
+  const { small, big, real } = useMemo(starModels, []);
+  const temp = useMemo(() => ({ matrix: new Matrix4(), position: new Vector3(), rotation: new Quaternion(), scale: new Vector3(), up: new Vector3(0, 1, 0) }), []);
 
   useFrame(({ clock }) => {
-    const stars = mesh.current;
-    if (!stars) return;
     const items = useGameStore.getState().session.run.stars.items;
     const spin = clock.elapsedTime * RENDER.STAR_SPIN;
-    let count = 0;
+    small.begin();
+    big.begin();
     for (let i = 0; i < items.length; i++) {
       const star = items[i];
       if (!star?.active) continue;
-      dummy.position.set(star.x, star.y, star.z);
-      dummy.rotation.set(0, spin + i * RENDER.STAR_PHASE_STEP, 0);
-      dummy.scale.setScalar(star.big ? RENDER.BIG_STAR_SCALE : 1);
-      dummy.updateMatrix();
-      stars.setMatrixAt(count, dummy.matrix);
-      stars.setColorAt(count, star.big ? bigColor : color);
-      count++;
+      temp.position.set(star.x, star.y, star.z);
+      temp.rotation.setFromAxisAngle(temp.up, spin + i * RENDER.STAR_PHASE_STEP);
+      // A real big-star model is built to size; the placeholder is scaled up.
+      temp.scale.setScalar(star.big && !real ? RENDER.BIG_STAR_SCALE : 1);
+      temp.matrix.compose(temp.position, temp.rotation, temp.scale);
+      (star.big ? big : small).add(temp.matrix);
     }
-    stars.count = count;
-    stars.instanceMatrix.needsUpdate = true;
-    if (stars.instanceColor) stars.instanceColor.needsUpdate = true;
+    small.end();
+    big.end();
   });
 
-  return <instancedMesh ref={mesh} args={[geometry, material, POOLS.STARS]} frustumCulled={false} />;
+  return (
+    <>
+      {[...small.objects, ...big.objects].map((mesh) => (
+        <primitive key={mesh.uuid} object={mesh} />
+      ))}
+    </>
+  );
 }

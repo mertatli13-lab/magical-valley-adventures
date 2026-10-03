@@ -1,17 +1,24 @@
 import { Canvas } from '@react-three/fiber';
+import { useAssetStore } from '../store/assetStore';
 import { CAMERA, RENDER, SCREENS } from '../config';
 import { Barriers } from './Barriers';
 import { Director } from './Director';
 import { Forest } from './Forest';
 import { Ground } from './Ground';
+import { Particles } from './Particles';
 import { HitPop } from './HitPop';
 import { Player } from './Player';
 import { RunLoop } from './RunLoop';
 import { RunWorld } from './RunWorld';
+import { Scenery } from './Scenery';
+import { Sky } from './Sky';
 import { StarPops } from './StarPops';
 import { Stars } from './Stars';
 
 export function GameScene() {
+  // The worlds read loaded models when they mount, so they wait for loading to finish
+  // (the Landing screen covers everything until then).
+  const loaded = useAssetStore((state) => state.done);
   return (
     <Canvas
       className="scene"
@@ -25,15 +32,20 @@ export function GameScene() {
     >
       <RunLoop />
       <Director />
-      <Forest />
-      <RunWorld>
-        <Ground />
-        <Barriers />
-        <Stars />
-        <StarPops />
-        <HitPop />
-        <Player />
-      </RunWorld>
+      {loaded && <Forest />}
+      {loaded && (
+        <RunWorld>
+          <Sky />
+          <Ground />
+          <Scenery />
+          <Particles />
+          <Barriers />
+          <Stars />
+          <StarPops />
+          <HitPop />
+          <Player />
+        </RunWorld>
+      )}
     </Canvas>
   );
 }

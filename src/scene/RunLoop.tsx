@@ -7,9 +7,12 @@ import { nowSeconds } from '../ui/useControls';
 const SIMULATION_PRIORITY = -1;
 
 export function RunLoop() {
-  useFrame((_, delta) => {
+  useFrame(({ gl }, delta) => {
     const { session, stats, sync } = useGameStore.getState();
     if (delta > 0) stats.fps += (1 / delta - stats.fps) * DEBUG.FPS_SMOOTHING;
+    // Totals from the frame just drawn (they reset when the next frame renders).
+    stats.drawCalls = gl.info.render.calls;
+    stats.triangles = gl.info.render.triangles;
     session.update(delta, nowSeconds());
     sync();
   }, SIMULATION_PRIORITY);

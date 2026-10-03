@@ -2,8 +2,8 @@ import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { MeshStandardMaterial, type Group, type Mesh } from 'three';
 import {
-  ACCESSORY_LOOKS,
   ATTACH_HEIGHTS,
+  BLOB_SHADOW,
   CHARACTER_COLORS,
   CHARACTER_POSES,
   JUMP,
@@ -12,106 +12,65 @@ import {
   RENDER,
   SLIDE,
 } from '../config';
-import { ACCESSORIES, type AccessoryInfo, type SignatureMoveInfo } from '../game/catalogue';
+import type { ClipName, PoseInput } from '../game/animation';
+import { ACCESSORIES, type AccessoryInfo, type CharacterId, type SignatureMoveInfo } from '../game/catalogue';
+import type { Session } from '../game/session';
 import { useGameStore } from '../store/gameStore';
+import { makeAccessoryPlaceholder } from './accessoryShapes';
+import { ACCESSORY_MODELS, CHARACTER_MODELS } from './assetManifest';
+import { getModel } from './assets';
+import { BlobShadow } from './BlobShadow';
+import { CharacterModel, type CharacterFrame } from './CharacterModel';
 
 const RADIUS = PLAYER.HALF_WIDTH;
 const BODY_LENGTH = PLAYER.STAND_HEIGHT - 2 * RADIUS;
 const TRAIL_INDICES = Array.from({ length: MOVE_LOOKS.TRAIL_COUNT }, (_, i) => i);
 const FULL_TURN = Math.PI * 2;
+/** Accessories drawn as a trail behind the hero rather than worn. */
+const TRAIL_ACCESSORY = 'sparkle-trail';
 
-/** A placeholder accessory: a simple shape from ACCESSORY_LOOKS. */
-function AccessoryShape({ item }: { item: AccessoryInfo }) {
-  const look = ACCESSORY_LOOKS[item.id as keyof typeof ACCESSORY_LOOKS];
-  if (!look) return null;
-  const material = <meshStandardMaterial color={look.color} />;
-  switch (look.shape) {
-    case 'box':
-      return (
-        <mesh>
-          <boxGeometry args={[...look.size]} />
-          {material}
-        </mesh>
-      );
-    case 'cone':
-      return (
-        <mesh>
-          <coneGeometry args={[look.size[0], look.size[1], MOVE_LOOKS.SEGMENTS * 2]} />
-          {material}
-        </mesh>
-      );
-    case 'torus':
-      return (
-        <mesh rotation-x={Math.PI / 2}>
-          <torusGeometry args={[look.size[0], look.size[1], MOVE_LOOKS.SEGMENTS, MOVE_LOOKS.SEGMENTS * 3]} />
-          {material}
-        </mesh>
-      );
-    case 'sphere':
-      return (
-        <mesh>
-          <sphereGeometry args={[look.size[0], MOVE_LOOKS.SEGMENTS, MOVE_LOOKS.SEGMENTS]} />
-          {material}
-        </mesh>
-      );
-  }
+interface Equipment {
+  changes: number;
+  move?: SignatureMoveInfo;
+  accessory?: AccessoryInfo;
+}
+
+/** Equipment changes only between runs: look it up when the session reports a change, not every frame. */
+function refreshEquipment(cache: Equipment, session: Session): Equipment {
+  if (cache.changes === session.changes) return cache;
+  return { changes: session.changes, move: session.activeMove, accessory: session.equippedAccessory };
 }
 
 /**
- * Grey-box hero: a capsule 1.2 m tall in the chosen character's colour, with
- * the equipped accessory at its attach point (placeholders attach relative to
- * the top of the capsule). It squashes when sliding, blinks while safe, sits
- * tilted when out and hops on a new best run. Signature moves only change how
- * it looks; the simulation never sees them.
+ * Grey-box hero: a capsule in the character's colour with its accessory at the
+ * attach point. It squashes when sliding, sits tilted when out, hops on a new
+ * best, and shows the signature move as a simple effect.
  */
-export function Player() {
-  const root = useRef<Group>(null);
+function Capsule({ equipment }: { equipment: { current: Equipment } }) {
   const pivot = useRef<Group>(null);
   const body = useRef<Mesh>(null);
   const accessories = useRef<(Group | null)[]>([]);
-  const beads = useRef<(Mesh | null)[]>([]);
+  const placeholders = useMemo(() => ACCESSORIES.map((item) => makeAccessoryPlaceholder(item.id)), []);
   const shownCharacter = useRef('');
-  const beadMaterials = useMemo(
-    () => TRAIL_INDICES.map(() => new MeshStandardMaterial({ emissiveIntensity: 0.6 })),
-    [],
-  );
-  const shownTrail = useRef('');
-  // Equipment only changes between runs; look it up when the session reports a change, not every frame.
-  const equipment = useRef<{ changes: number; move?: SignatureMoveInfo; accessory?: AccessoryInfo }>({ changes: -1 });
 
   useFrame(({ clock }) => {
-    const hero = root.current;
-    const capsule = body.current;
     const centre = pivot.current;
-    if (!hero || !capsule || !centre) return;
+    const capsule = body.current;
+    if (!centre || !capsule) return;
     const { session } = useGameStore.getState();
     const { player } = session.run;
-    if (equipment.current.changes !== session.changes) {
-      equipment.current = { changes: session.changes, move: session.activeMove, accessory: session.equippedAccessory };
-    }
     const character = session.equippedCharacter.id;
     if (character !== shownCharacter.current) {
       shownCharacter.current = character;
       (capsule.material as MeshStandardMaterial).color.set(CHARACTER_COLORS[character]);
     }
 
-    // Whole hero: position, celebration hop, dizzy tilt, blink.
-    const celebrating = session.screen === 'RESULTS' && session.result.newBest;
-    const hop = celebrating
-      ? Math.abs(Math.sin(clock.elapsedTime * CHARACTER_POSES.CELEBRATE_RATE)) * CHARACTER_POSES.CELEBRATE_HEIGHT
-      : 0;
-    hero.position.set(player.x, player.y + hop, PLAYER.Z);
-    hero.rotation.z = session.screen === 'OUT' ? CHARACTER_POSES.OUT_TILT : 0;
-    const blinking = session.screen === 'RUN' && player.safeTimer > 0;
-    hero.visible = !blinking || (player.safeTimer * RENDER.BLINK_HZ) % 1 >= 0.5;
-
-    // Body: squash when sliding, plus the signature move's look.
     let scaleX = 1;
     let scaleZ = 1;
     let scaleY = player.height / PLAYER.STAND_HEIGHT;
     let tiltX = 0;
     let tiltZ = 0;
-    const { move } = equipment.current;
+    const { move, accessory } = equipment.current;
     const airborne = player.y > 0;
     const apex = Math.min(player.y / JUMP.HEIGHT, 1);
     const sliding = player.slideTimer > 0;
@@ -127,30 +86,123 @@ export function Player() {
     } else if (move?.id === 'clumsy-tumble' && sliding) {
       tiltX = -(1 - player.slideTimer / SLIDE.TIME) * MOVE_LOOKS.TUMBLE_TURNS * FULL_TURN;
     }
+    const celebrating = session.screen === 'RESULTS' && session.result.newBest;
+    if (session.screen === 'OUT') tiltZ = CHARACTER_POSES.OUT_TILT;
     // Tilts turn the body and its accessory together around the body's centre; only the body squashes.
-    centre.position.y = player.height / 2;
+    const hop = celebrating
+      ? Math.abs(Math.sin(clock.elapsedTime * CHARACTER_POSES.CELEBRATE_RATE)) * CHARACTER_POSES.CELEBRATE_HEIGHT
+      : 0;
+    centre.position.y = player.height / 2 + hop;
     centre.rotation.set(tiltX, 0, tiltZ);
     capsule.scale.set(scaleX, scaleY, scaleZ);
 
-    // Accessory: only the equipped one is shown, at its attach point.
-    const equipped = equipment.current.accessory;
     for (let i = 0; i < ACCESSORIES.length; i++) {
       const group = accessories.current[i];
       const item = ACCESSORIES[i];
       if (!group || !item) continue;
-      group.visible = item === equipped && item.id !== 'sparkle-trail';
-      if (!group.visible) continue;
-      const look = ACCESSORY_LOOKS[item.id as keyof typeof ACCESSORY_LOOKS];
-      group.position.set(0, player.height * (ATTACH_HEIGHTS[item.attach] - 0.5) + look.lift, look.back);
+      group.visible = item === accessory && item.id !== TRAIL_ACCESSORY;
+      if (group.visible) group.position.y = player.height * (ATTACH_HEIGHTS[item.attach] - 0.5);
+    }
+  });
+
+  return (
+    <group ref={pivot}>
+      <mesh ref={body}>
+        <capsuleGeometry args={[RADIUS, BODY_LENGTH, RENDER.PLAYER_CAP_SEGMENTS, RENDER.PLAYER_RADIAL_SEGMENTS]} />
+        <meshStandardMaterial color={RENDER.PLAYER_COLOR} />
+      </mesh>
+      {placeholders.map((object, i) => (
+        <group key={object.uuid} ref={(group) => void (accessories.current[i] = group)} visible={false}>
+          <primitive object={object} />
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/**
+ * The hero. Uses the character's model when it exists, with its clips driven
+ * by the run, otherwise the capsule placeholder. Blinks while safe, casts a
+ * soft blob shadow, and draws the rainbow dash or sparkle trail. Signature
+ * moves only change how it looks; the simulation never sees them.
+ */
+export function Player() {
+  const characterId = useGameStore((state) => (state.version, state.session.equippedCharacter.id)) as CharacterId;
+  const gltf = getModel(CHARACTER_MODELS[characterId]);
+  const root = useRef<Group>(null);
+  const shadow = useRef<Mesh>(null);
+  const beads = useRef<(Mesh | null)[]>([]);
+  const equipment = useRef<Equipment>({ changes: -1 });
+  const hit = useRef({ count: 0, at: -Infinity });
+  const clock = useRef(0);
+  const beadMaterials = useMemo(() => TRAIL_INDICES.map(() => new MeshStandardMaterial({ emissiveIntensity: 0.6 })), []);
+  const shownTrail = useRef('');
+  const frameState = useRef<CharacterFrame>({
+    pose: { pose: 'run', airborne: false, sliding: false, hitAge: Infinity, signature: null },
+    speed: 0,
+    frozen: false,
+    dark: false,
+    accessory: null,
+  });
+
+  /** The model's state this frame, reusing one object. */
+  const heroFrame = (): CharacterFrame => {
+    const { session } = useGameStore.getState();
+    const { run } = session;
+    const pose: PoseInput = frameState.current.pose;
+    pose.pose =
+      session.screen === 'OUT'
+        ? 'out'
+        : session.screen === 'RESULTS'
+          ? session.result.newBest
+            ? 'celebrate'
+            : 'idle'
+          : 'run';
+    pose.airborne = run.player.y > 0;
+    pose.sliding = run.player.slideTimer > 0;
+    pose.hitAge = clock.current - hit.current.at;
+    pose.signature = equipment.current.move?.replaces ?? null;
+    const accessory = equipment.current.accessory?.id ?? null;
+    frameState.current.speed = run.speed;
+    frameState.current.frozen = session.screen === 'PAUSE';
+    // The sparkle trail is drawn as a trail unless it has its own model.
+    frameState.current.accessory =
+      accessory === TRAIL_ACCESSORY && !getModel(ACCESSORY_MODELS[accessory] ?? '') ? null : accessory;
+    return frameState.current;
+  };
+  const onClip = (clip: ClipName) => {
+    useGameStore.getState().stats.heroClip = clip;
+  };
+
+  useFrame((state, delta) => {
+    const hero = root.current;
+    if (!hero) return;
+    const { session } = useGameStore.getState();
+    const { run } = session;
+    const { player } = run;
+    equipment.current = refreshEquipment(equipment.current, session);
+    if (session.screen !== 'PAUSE') clock.current += delta;
+    if (run.hitCount !== hit.current.count) hit.current = { count: run.hitCount, at: run.hitCount > 0 ? clock.current : -Infinity };
+
+    hero.position.set(player.x, player.y, PLAYER.Z);
+    const blinking = session.screen === 'RUN' && player.safeTimer > 0;
+    hero.visible = !blinking || (player.safeTimer * RENDER.BLINK_HZ) % 1 >= 0.5;
+
+    // Blob shadow stays on the ground and shrinks as the hero rises.
+    if (shadow.current) {
+      shadow.current.position.x = player.x;
+      shadow.current.scale.setScalar(Math.max(0, 1 - player.y / BLOB_SHADOW.FADE_HEIGHT));
     }
 
     // Trail: the rainbow dash while sliding, or the sparkle trail accessory while running.
-    const trail =
-      move?.id === 'rainbow-dash' && sliding ? 'rainbow' : equipped?.id === 'sparkle-trail' ? 'sparkle' : '';
+    const { move, accessory } = equipment.current;
+    const sliding = player.slideTimer > 0;
+    const trail = move?.id === 'rainbow-dash' && sliding ? 'rainbow' : accessory?.id === TRAIL_ACCESSORY ? 'sparkle' : '';
     if (trail !== shownTrail.current) {
       shownTrail.current = trail;
       beadMaterials.forEach((material, i) => {
-        const color = trail === 'rainbow' ? (MOVE_LOOKS.RAINBOW[i % MOVE_LOOKS.RAINBOW.length] ?? MOVE_LOOKS.SPARKLE_COLOR) : MOVE_LOOKS.SPARKLE_COLOR;
+        const color =
+          trail === 'rainbow' ? (MOVE_LOOKS.RAINBOW[i % MOVE_LOOKS.RAINBOW.length] ?? MOVE_LOOKS.SPARKLE_COLOR) : MOVE_LOOKS.SPARKLE_COLOR;
         material.color.set(color);
         material.emissive.set(color);
       });
@@ -160,7 +212,7 @@ export function Player() {
       if (!bead) continue;
       bead.visible = trail !== '' && hero.visible;
       if (!bead.visible) continue;
-      const wobble = Math.sin(clock.elapsedTime * MOVE_LOOKS.TRAIL_WOBBLE_RATE + i) * MOVE_LOOKS.TRAIL_WOBBLE;
+      const wobble = Math.sin(state.clock.elapsedTime * MOVE_LOOKS.TRAIL_WOBBLE_RATE + i) * MOVE_LOOKS.TRAIL_WOBBLE;
       bead.position.set(player.x + wobble, player.y + MOVE_LOOKS.TRAIL_HEIGHT, PLAYER.Z + (i + 1) * MOVE_LOOKS.TRAIL_SPACING);
     }
   });
@@ -168,18 +220,13 @@ export function Player() {
   return (
     <>
       <group ref={root}>
-        <group ref={pivot}>
-          <mesh ref={body}>
-            <capsuleGeometry args={[RADIUS, BODY_LENGTH, RENDER.PLAYER_CAP_SEGMENTS, RENDER.PLAYER_RADIAL_SEGMENTS]} />
-            <meshStandardMaterial color={RENDER.PLAYER_COLOR} />
-          </mesh>
-          {ACCESSORIES.map((item, i) => (
-            <group key={item.id} ref={(group) => void (accessories.current[i] = group)} visible={false}>
-              <AccessoryShape item={item} />
-            </group>
-          ))}
-        </group>
+        {gltf ? (
+          <CharacterModel key={characterId} gltf={gltf} name={characterId} frame={heroFrame} onClip={onClip} />
+        ) : (
+          <Capsule equipment={equipment} />
+        )}
       </group>
+      <BlobShadow ref={shadow} />
       {TRAIL_INDICES.map((i) => (
         <mesh key={i} ref={(bead) => void (beads.current[i] = bead)} material={beadMaterials[i]} visible={false}>
           <sphereGeometry args={[MOVE_LOOKS.TRAIL_SIZE, MOVE_LOOKS.SEGMENTS, MOVE_LOOKS.SEGMENTS]} />

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { SCREENS } from '../../config';
 import { CHARACTERS } from '../../game/catalogue';
+import { useAssetStore } from '../../store/assetStore';
 import { useGameStore, useSession } from '../../store/gameStore';
 import { usePresence } from '../usePresence';
 
@@ -23,6 +24,7 @@ export function Landing() {
   const session = useSession();
   const act = useGameStore((state) => state.act);
   const { mounted, leaving } = usePresence(session.screen === 'LANDING', TRANSITION_MS);
+  const { loaded, total, done } = useAssetStore();
   if (!mounted) return null;
 
   return (
@@ -65,11 +67,16 @@ export function Landing() {
         type="button"
         className="play-button"
         autoFocus
-        disabled={leaving}
+        disabled={leaving || !done}
         onClick={() => act((s) => s.play())}
       >
-        PLAY
+        {done ? 'PLAY' : 'Loading'}
       </button>
+      {!done && (
+        <div className="loading-bar" role="progressbar" aria-valuemin={0} aria-valuemax={total} aria-valuenow={loaded}>
+          <div className="loading-fill" style={{ width: `${total ? (loaded / total) * 100 : 0}%` }} />
+        </div>
+      )}
     </div>
   );
 }

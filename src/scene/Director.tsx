@@ -1,7 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef } from 'react';
-import { Color, Fog, Vector3, type AmbientLight, type DirectionalLight } from 'three';
-import { CAMERA, NIGHT, RENDER, SCREENS } from '../config';
+import { Color, Fog, Vector3, type DirectionalLight, type HemisphereLight } from 'three';
+import { CAMERA, LIGHTING, NIGHT, RENDER, SCREENS } from '../config';
 import type { Screen } from '../game/machine';
 import { frameDt } from '../game/run';
 import { useGameStore } from '../store/gameStore';
@@ -26,13 +26,15 @@ function smoothstep(t: number): number {
  */
 export function Director() {
   const scene = useThree((state) => state.scene);
-  const ambient = useRef<AmbientLight>(null);
+  const hemi = useRef<HemisphereLight>(null);
   const sun = useRef<DirectionalLight>(null);
   const v = useMemo(
     () => ({
       night: new Color(NIGHT.SKY_COLOR),
       day: new Color(RENDER.SKY_COLOR),
+      dayFog: new Color(RENDER.FOG_COLOR),
       sky: new Color(NIGHT.SKY_COLOR),
+      fog: new Color(NIGHT.SKY_COLOR),
       fromPosition: new Vector3(...SCREENS.SKY_CAMERA_POSITION),
       fromLook: new Vector3(...SCREENS.SKY_LOOK_AT),
       look: new Vector3(...SCREENS.SKY_LOOK_AT),
@@ -49,7 +51,7 @@ export function Director() {
 
   useLayoutEffect(() => {
     scene.background = v.sky;
-    scene.fog = new Fog(v.sky, RENDER.FOG_NEAR, RENDER.FOG_FAR);
+    scene.fog = new Fog(v.fog, RENDER.FOG_NEAR, RENDER.FOG_FAR);
   }, [scene, v]);
 
   useFrame(({ camera }, delta) => {
@@ -63,9 +65,12 @@ export function Director() {
     const dayTarget = isDayScreen(screen) ? 1 : 0;
     mood.daylight += Math.sign(dayTarget - mood.daylight) * Math.min(step, Math.abs(dayTarget - mood.daylight));
     v.sky.copy(v.night).lerp(v.day, mood.daylight);
-    if (scene.fog) scene.fog.color.copy(v.sky); // Fog keeps its own copy of the colour
-    if (ambient.current) {
-      ambient.current.intensity = NIGHT.AMBIENT_INTENSITY + (RENDER.AMBIENT_INTENSITY - NIGHT.AMBIENT_INTENSITY) * mood.daylight;
+    // Day fog matches the sky dome's horizon, so it hides the spawn point cleanly.
+    v.fog.copy(v.night).lerp(v.dayFog, mood.daylight);
+    if (scene.fog) scene.fog.color.copy(v.fog); // Fog keeps its own copy of the colour
+    if (hemi.current) {
+      hemi.current.intensity =
+        LIGHTING.HEMI_NIGHT_INTENSITY + (LIGHTING.HEMI_DAY_INTENSITY - LIGHTING.HEMI_NIGHT_INTENSITY) * mood.daylight;
     }
     if (sun.current) {
       sun.current.intensity = NIGHT.SUN_INTENSITY + (RENDER.SUN_INTENSITY - NIGHT.SUN_INTENSITY) * mood.daylight;
@@ -103,8 +108,16 @@ export function Director() {
 
   return (
     <>
-      <ambientLight ref={ambient} intensity={NIGHT.AMBIENT_INTENSITY} />
-      <directionalLight ref={sun} position={[...RENDER.SUN_POSITION]} intensity={NIGHT.SUN_INTENSITY} />
+      <hemisphereLight
+        ref={hemi}
+        args={[LIGHTING.HEMI_SKY_COLOR, LIGHTING.HEMI_GROUND_COLOR, LIGHTING.HEMI_NIGHT_INTENSITY]}
+      />
+      <directionalLight
+        ref={sun}
+        color={LIGHTING.SUN_COLOR}
+        position={[...RENDER.SUN_POSITION]}
+        intensity={NIGHT.SUN_INTENSITY}
+      />
     </>
   );
 }
