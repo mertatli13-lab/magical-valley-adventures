@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { FAIRNESS, LANES, OBSTACLES, RENDER, STAR_SPAWN, STARS, WORLD } from '../config';
 import { createBarrierPool, moveBarriers, type Barrier } from './barriers';
 import { baseSpeedAt, gapTimeFor, tierAt } from './difficulty';
-import { createRun, stepRun, togglePause } from './run';
+import { createRun, stepRun } from './run';
 import { createSpawner, spawnStars, starChance, starLineLength, stepSpawner } from './spawner';
 import { activeStarCount, createStarPool, moveStars, spawnStar, type Star } from './stars';
 import { RateWindow } from './stats';
@@ -139,6 +139,7 @@ describe('star pickup', () => {
     for (let i = 0; i < 60; i++) stepRun(run, DT, i * DT);
     expect(run.starsCollected).toBe(2);
     expect(run.runStars).toBe(STARS.VALUE + STARS.BIG_VALUE);
+    expect(run.runStarsCollected).toBe(STARS.VALUE + STARS.BIG_VALUE);
     expect(run.collectFeed.count).toBe(2);
   });
 
@@ -155,20 +156,6 @@ describe('star pickup', () => {
     spawnStar(run.stars, 0, STAR_SPAWN.Y, -3, false);
     for (let i = 0; i < 10; i++) stepRun(run, 1 / 30, i / 30);
     expect(run.starsCollected).toBe(1);
-  });
-});
-
-describe('pause', () => {
-  it('freezes the run and resumes it', () => {
-    const run = createRun();
-    stepRun(run, DT, 0);
-    togglePause(run);
-    const time = run.time;
-    for (let i = 0; i < 30; i++) stepRun(run, DT, i * DT);
-    expect(run.time).toBe(time);
-    togglePause(run);
-    stepRun(run, DT, 1);
-    expect(run.time).toBeGreaterThan(time);
   });
 });
 

@@ -1,7 +1,11 @@
 import { GameScene } from './scene/GameScene';
 import { DebugPanel } from './ui/DebugPanel';
 import { Hud } from './ui/Hud';
-import { OutBanner } from './ui/OutBanner';
+import { Landing } from './ui/screens/Landing';
+import { Out } from './ui/screens/Out';
+import { Pause } from './ui/screens/Pause';
+import { Results } from './ui/screens/Results';
+import { Select } from './ui/screens/Select';
 import { useControls } from './ui/useControls';
 
 export function App() {
@@ -10,7 +14,11 @@ export function App() {
     <div className="app">
       <GameScene />
       <Hud />
-      <OutBanner />
+      <Select />
+      <Pause />
+      <Out />
+      <Results />
+      <Landing />
       <DebugPanel />
     </div>
   );

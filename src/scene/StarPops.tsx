@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { MeshBasicMaterial, SphereGeometry, type Mesh } from 'three';
 import { POOLS, RENDER } from '../config';
-import { useRunStore } from '../store/runStore';
+import { useGameStore } from '../store/gameStore';
 
 const POP_INDICES = Array.from({ length: POOLS.COLLECT_EVENTS }, (_, i) => i);
 
@@ -22,7 +22,8 @@ export function StarPops() {
   );
 
   useFrame((_, delta) => {
-    const { run } = useRunStore.getState();
+    const { session } = useGameStore.getState();
+    const { run } = session;
     const feed = run.collectFeed;
     if (feed.count < seen.current) seen.current = 0; // a new run started
     // Start a pop for each pickup since the last frame (at most one per slot).
@@ -36,7 +37,7 @@ export function StarPops() {
     }
     seen.current = feed.count;
 
-    const scroll = run.status === 'RUNNING' ? run.speed * delta : 0;
+    const scroll = session.screen === 'RUN' ? run.speed * delta : 0;
     for (let slot = 0; slot < POOLS.COLLECT_EVENTS; slot++) {
       const mesh = meshes.current[slot];
       const material = materials[slot];

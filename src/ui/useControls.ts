@@ -1,10 +1,7 @@
 import { useEffect } from 'react';
 import { DEBUG } from '../config';
 import { keyToAction, swipeToAction } from '../game/input';
-import { useRunStore } from '../store/runStore';
-
-/** Restarts the run from the temporary OUT text (Phase 2; replaced by the Out screen in Phase 4). */
-const RESTART_KEY = 'KeyR';
+import { useGameStore } from '../store/gameStore';
 
 /** Keys that pause and resume the run. */
 const PAUSE_KEYS = ['KeyP', 'Escape'];
@@ -15,12 +12,18 @@ export function nowSeconds(): number {
 }
 
 /**
- * Listens for swipes and keys and feeds actions into the run's input buffer
- * (A2). Every action goes through the same buffer, whatever produced it.
+ * Listens for swipes and keys and routes them by screen (A2):
+ * - Run: the four moves go through the run's input buffer; P or Escape pauses.
+ * - Pause: P or Escape resumes.
+ * - Select: left and right turn the stage. A swipe left brings the next
+ *   character to the front, like the arrow key on the right.
+ * Buttons on each screen handle taps, Enter and Space themselves.
+ * The run also pauses when the browser tab is hidden.
  */
 export function useControls(): void {
   useEffect(() => {
-    const { run, toggleDebug, restart, togglePause } = useRunStore.getState();
+    const { act, toggleDebug } = useGameStore.getState();
+    const session = () => useGameStore.getState().session;
     let startX = 0;
     let startY = 0;
     let tracking = false;
@@ -30,19 +33,23 @@ export function useControls(): void {
         if (!event.repeat) toggleDebug();
         return;
       }
-      if (PAUSE_KEYS.includes(event.code)) {
-        if (!event.repeat) togglePause();
-        return;
-      }
-      if (event.code === RESTART_KEY) {
-        if (!event.repeat && run.status === 'OUT') restart();
-        return;
-      }
+      const screen = session().screen;
       const action = keyToAction(event.code);
-      if (action === null) return;
-      event.preventDefault(); // stop Space and arrows from scrolling the page
-      if (event.repeat) return; // holding a key does not repeat the action
-      run.input.push(action, nowSeconds());
+      if (screen === 'RUN') {
+        if (PAUSE_KEYS.includes(event.code)) {
+          if (!event.repeat) act((s) => s.pause());
+          return;
+        }
+        if (action === null) return;
+        event.preventDefault(); // stop Space and arrows from scrolling the page
+        if (!event.repeat) session().run.input.push(action, nowSeconds()); // holding a key does not repeat
+      } else if (screen === 'PAUSE') {
+        if (PAUSE_KEYS.includes(event.code) && !event.repeat) act((s) => s.resume());
+      } else if (screen === 'SELECT') {
+        if (action !== 'LEFT' && action !== 'RIGHT') return;
+        event.preventDefault();
+        if (!event.repeat) act((s) => s.rotate(action === 'RIGHT' ? 1 : -1));
+      }
     };
 
     const onTouchStart = (event: TouchEvent) => {
@@ -58,7 +65,12 @@ export function useControls(): void {
       if (!touch || !tracking) return;
       tracking = false;
       const action = swipeToAction(touch.clientX - startX, touch.clientY - startY);
-      if (action !== null) run.input.push(action, nowSeconds());
+      if (action === null) return;
+      const screen = session().screen;
+      if (screen === 'RUN') session().run.input.push(action, nowSeconds());
+      else if (screen === 'SELECT' && (action === 'LEFT' || action === 'RIGHT')) {
+        act((s) => s.rotate(action === 'LEFT' ? 1 : -1));
+      }
     };
 
     const onTouchCancel = () => {
@@ -68,17 +80,23 @@ export function useControls(): void {
     // Stops iPad Safari from scrolling or bouncing the page during a swipe.
     const onTouchMove = (event: TouchEvent) => event.preventDefault();
 
+    const onVisibilityChange = () => {
+      if (document.hidden) act((s) => s.pause());
+    };
+
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('touchstart', onTouchStart, { passive: true });
     window.addEventListener('touchend', onTouchEnd, { passive: true });
     window.addEventListener('touchcancel', onTouchCancel, { passive: true });
     window.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchend', onTouchEnd);
       window.removeEventListener('touchcancel', onTouchCancel);
       window.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, []);
 }

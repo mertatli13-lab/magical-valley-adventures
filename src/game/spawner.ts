@@ -235,10 +235,11 @@ export function stepSpawner(
   runTime: number,
   tier: number,
   gapTime: number,
+  inReviveClearZone = false,
 ): boolean {
   spawner.distanceToNextRow -= distance;
   spawner.distanceSinceRow += distance;
-  if (spawner.distanceToNextRow > 0 || runTime <= FAIRNESS.NO_BARRIER_START_TIME) return false;
+  if (spawner.distanceToNextRow > 0 || runTime <= FAIRNESS.NO_BARRIER_START_TIME || inReviveClearZone) return false;
   // Measure to the previous row as it really is, not as speed x gap: the speed
   // may have changed since it spawned (a hit slows the world down).
   const planned = speed * gapTime;

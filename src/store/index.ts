@@ -1,1 +1,1 @@
-export * from './runStore';
+export * from './gameStore';

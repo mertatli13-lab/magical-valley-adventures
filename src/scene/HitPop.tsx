@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useRef } from 'react';
 import type { Mesh, MeshBasicMaterial } from 'three';
 import { OBSTACLES, RENDER } from '../config';
-import { useRunStore } from '../store/runStore';
+import { useGameStore } from '../store/gameStore';
 
 /**
  * Grey-box pop when a barrier is hit: a sphere that grows and fades. Hits are
@@ -17,7 +17,8 @@ export function HitPop() {
   useFrame((_, delta) => {
     const pop = mesh.current;
     if (!pop) return;
-    const { run } = useRunStore.getState();
+    const { session } = useGameStore.getState();
+    const { run } = session;
     if (run.hitCount !== seenHits.current) {
       seenHits.current = run.hitCount;
       if (run.hitCount > 0) {
@@ -29,7 +30,7 @@ export function HitPop() {
     const t = Math.min(age.current / RENDER.POP_DURATION, 1);
     pop.visible = t < 1;
     if (!pop.visible) return;
-    if (run.status === 'RUNNING') pop.position.z += run.speed * delta;
+    if (session.screen === 'RUN') pop.position.z += run.speed * delta;
     pop.scale.setScalar(RENDER.POP_START_SCALE + (RENDER.POP_END_SCALE - RENDER.POP_START_SCALE) * t);
     (pop.material as MeshBasicMaterial).opacity = 1 - t;
   });

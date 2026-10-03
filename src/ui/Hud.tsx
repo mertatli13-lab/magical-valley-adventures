@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { HEARTS } from '../config';
-import { useRunStore } from '../store/runStore';
+import { useGameStore, useSession } from '../store/gameStore';
 
 const HEART_INDICES = Array.from({ length: HEARTS.START }, (_, i) => i);
 const BOUNCE_CLASS = 'bounce';
@@ -11,24 +11,28 @@ const BOUNCE_CLASS = 'bounce';
  * DOM from an animation-frame loop, so React does not re-render every frame.
  */
 export function Hud() {
-  const status = useRunStore((state) => state.status);
-  const togglePause = useRunStore((state) => state.togglePause);
+  const session = useSession();
+  const act = useGameStore((state) => state.act);
   const heartsRef = useRef<HTMLDivElement>(null);
   const starsRef = useRef<HTMLSpanElement>(null);
   const counterRef = useRef<HTMLDivElement>(null);
   const distanceRef = useRef<HTMLSpanElement>(null);
+  const { screen } = session;
+  const visible = screen === 'RUN' || screen === 'PAUSE' || screen === 'OUT';
 
+  // Restarts whenever the HUD appears, so fresh elements get their first values.
   useEffect(() => {
+    if (!visible) return;
     let frame = 0;
     let shownStars = -1;
     let shownHearts = -1;
     let shownDistance = -1;
     const update = () => {
-      const { run } = useRunStore.getState();
-      if (run.runStars !== shownStars) {
+      const { run } = useGameStore.getState().session;
+      if (run.runStarsCollected !== shownStars) {
         // Bounce on every pickup, but not when a new run resets the counter.
-        const bounce = run.runStars > shownStars && shownStars >= 0;
-        shownStars = run.runStars;
+        const bounce = run.runStarsCollected > shownStars && shownStars >= 0;
+        shownStars = run.runStarsCollected;
         if (starsRef.current) starsRef.current.textContent = String(shownStars);
         const counter = counterRef.current;
         if (bounce && counter) {
@@ -52,9 +56,9 @@ export function Hud() {
     };
     frame = requestAnimationFrame(update);
     return () => cancelAnimationFrame(frame);
-  }, []);
+  }, [visible]);
 
-  const paused = status === 'PAUSED';
+  if (!visible) return null;
   return (
     <div className="hud">
       <div className="hud-hearts" ref={heartsRef} aria-label="Hearts">
@@ -77,15 +81,14 @@ export function Hud() {
         type="button"
         className="hud-pause"
         onClick={(event) => {
-          togglePause();
+          act((s) => s.pause());
           event.currentTarget.blur(); // so Space keeps jumping instead of pressing the button
         }}
-        disabled={status === 'OUT'}
-        aria-label={paused ? 'Resume' : 'Pause'}
+        disabled={screen !== 'RUN'}
+        aria-label="Pause"
       >
-        {paused ? '▶' : 'II'}
+        II
       </button>
-      {paused && <div className="hud-paused">Paused</div>}
     </div>
   );
 }

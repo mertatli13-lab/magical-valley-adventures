@@ -181,6 +181,18 @@ export const CHARACTER_PRICES = {
   sugar: 4000,
 } as const;
 
+/** Display names, in stage order. */
+export const CHARACTER_NAMES = {
+  strawberry: 'Strawberry',
+  ginza: 'Ginza',
+  chity: 'Chity',
+  kusto: 'Kusto',
+  sugar: 'Sugar',
+} as const;
+
+/** Character the hero starts as on a fresh save. */
+export const DEFAULT_CHARACTER = 'strawberry';
+
 /** Every signature move costs the same. */
 export const SIGNATURE_MOVE_PRICE = 800;
 
@@ -357,6 +369,91 @@ export const RENDER = {
   SUN_POSITION: [5, 10, 5],
   /** Rotation that lays a plane flat on the ground. */
   FLAT_ROTATION_X: -Math.PI / 2,
+} as const;
+
+// ---------------------------------------------------------------------------
+// Screens (not gameplay)
+// ---------------------------------------------------------------------------
+
+export const SCREENS = {
+  /** Sky-to-forest camera move, and night-to-day when a run starts (seconds). */
+  TRANSITION_TIME: 0.8,
+  /** Camera while the Landing artwork covers the screen: looking up into the sky. */
+  SKY_CAMERA_POSITION: [0, 12, 7.5],
+  SKY_LOOK_AT: [0, 15, -6],
+  /** Camera on the character select stage. */
+  SELECT_CAMERA_POSITION: [0, 2.6, 7.5],
+  SELECT_LOOK_AT: [0, 1, 0],
+} as const;
+
+export const STAGE = {
+  RADIUS: 3,
+  HEIGHT: 0.3,
+  PODIUM_RADIUS: 0.8,
+  PODIUM_HEIGHT: 0.5,
+  /** Characters stand on a ring this far from the centre. */
+  RING_RADIUS: 2.2,
+  /** How high the focused character hops onto the podium. */
+  HOP_HEIGHT: 0.8,
+  /** How fast the stage turns and the focus moves, per second. */
+  ROTATE_RATE: 8,
+  FOCUS_RATE: 6,
+  SEGMENTS: 48,
+  COLOR: '#3b2d6b',
+  GLOW_COLOR: '#8f6bff',
+  GLOW_INTENSITY: 0.6,
+  /** Price tag height above a locked character's head. */
+  TAG_OFFSET: 0.35,
+  /** Soft light over the stage so the characters read at night. */
+  LIGHT_POSITION: [0, 5, 3],
+  LIGHT_INTENSITY: 40,
+  LIGHT_DISTANCE: 15,
+} as const;
+
+export const NIGHT = {
+  SKY_COLOR: '#141a3a',
+  AMBIENT_INTENSITY: 0.35,
+  SUN_INTENSITY: 0.3,
+  TREE_COUNT: 16,
+  TREE_MIN_DISTANCE: 7,
+  TREE_MAX_DISTANCE: 14,
+  TREE_HEIGHT: 4,
+  TREE_RADIUS: 1.2,
+  TRUNK_HEIGHT: 1,
+  TRUNK_RADIUS: 0.2,
+  TREE_COLOR: '#1f3b3a',
+  TRUNK_COLOR: '#3a2a22',
+  TREE_SEGMENTS: 8,
+  FIREFLY_COUNT: 40,
+  /** Fireflies drift inside a box around the stage, from this far out. */
+  FIREFLY_SPREAD: 9,
+  FIREFLY_MIN_Y: 0.5,
+  FIREFLY_MAX_Y: 3.5,
+  FIREFLY_BOB: 0.25,
+  FIREFLY_SPEED: 1.5,
+  FIREFLY_SIZE: 0.15,
+  FIREFLY_COLOR: '#fff59d',
+  /** Fixed seed so the forest looks the same every time. */
+  SEED: 7,
+} as const;
+
+/** Placeholder capsule colours until the real models arrive (Phase 6). */
+export const CHARACTER_COLORS = {
+  strawberry: '#ff9ec7',
+  ginza: '#b48cff',
+  chity: '#ffe066',
+  kusto: '#9fc3dd',
+  sugar: '#ffffff',
+} as const;
+
+export const CHARACTER_POSES = {
+  /** Locked characters stand as dark silhouettes. */
+  LOCKED_COLOR: '#120d1f',
+  /** The hero sits down dizzy on the Out screen: sideways tilt in radians. */
+  OUT_TILT: 0.5,
+  /** Celebration hop on a new best run. */
+  CELEBRATE_HEIGHT: 0.5,
+  CELEBRATE_RATE: 6,
 } as const;
 
 export const DEBUG = {

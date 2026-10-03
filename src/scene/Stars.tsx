@@ -2,7 +2,7 @@ import { useFrame } from '@react-three/fiber';
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { Color, ExtrudeGeometry, MeshBasicMaterial, Object3D, Shape, type InstancedMesh } from 'three';
 import { POOLS, RENDER } from '../config';
-import { useRunStore } from '../store/runStore';
+import { useGameStore } from '../store/gameStore';
 
 /** A flat five-point star, extruded and centred. Built once. */
 function createStarGeometry(): ExtrudeGeometry {
@@ -52,7 +52,7 @@ export function Stars() {
   useFrame(({ clock }) => {
     const stars = mesh.current;
     if (!stars) return;
-    const items = useRunStore.getState().run.stars.items;
+    const items = useGameStore.getState().session.run.stars.items;
     const spin = clock.elapsedTime * RENDER.STAR_SPIN;
     let count = 0;
     for (let i = 0; i < items.length; i++) {

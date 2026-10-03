@@ -1,4 +1,4 @@
-import { COLLISION, HEARTS, MAX_DT, PLAYER, SPAWNER } from '../config';
+import { COLLISION, HEARTS, MAX_DT, PLAYER, REVIVE, SPAWNER } from '../config';
 import {
   createBarrierPool,
   moveBarriers,
@@ -26,7 +26,7 @@ import {
 } from './stars';
 import { RateWindow } from './stats';
 
-export type RunStatus = 'RUNNING' | 'PAUSED' | 'OUT';
+export type RunStatus = 'RUNNING' | 'OUT';
 
 /** Everything the simulation of one run needs. Created once and reused across runs. */
 export interface RunState {
@@ -49,8 +49,12 @@ export interface RunState {
   lastHitType: BarrierType;
   lastHitX: number;
   lastHitZ: number;
-  /** Run score: the value of stars collected (a big star is worth 10). */
+  /** Run score: the value of stars collected (a big star is worth 10). Shown in the HUD. */
+  runStarsCollected: number;
+  /** This run's stars still unspent; revives are paid from these first (A7). */
   runStars: number;
+  /** Metres left after a revive during which no barrier rows spawn (A5). */
+  reviveClearRemaining: number;
   /** Number of star pickups this run. */
   starsCollected: number;
   collectFeed: CollectFeed;
@@ -81,7 +85,9 @@ export function createRun(seed: number = SPAWNER.DEFAULT_SEED): RunState {
     lastHitType: 'L',
     lastHitX: 0,
     lastHitZ: 0,
+    runStarsCollected: 0,
     runStars: 0,
+    reviveClearRemaining: 0,
     starsCollected: 0,
     collectFeed: createCollectFeed(),
     placedRate: new RateWindow(),
@@ -108,7 +114,9 @@ export function resetRun(run: RunState, seed: number = SPAWNER.DEFAULT_SEED): vo
   run.hearts = HEARTS.START;
   run.wasHit = false;
   run.hitCount = 0;
+  run.runStarsCollected = 0;
   run.runStars = 0;
+  run.reviveClearRemaining = 0;
   run.starsCollected = 0;
   run.placedRate.reset();
   run.collectedRate.reset();
@@ -166,7 +174,9 @@ function collectStars(run: RunState, distance: number): void {
     const dy = star.y - centerY;
     if (dx * dx + dy * dy + dz * dz > radiusSquared) continue;
     star.active = false;
-    run.runStars += starValue(star);
+    const value = starValue(star);
+    run.runStarsCollected += value;
+    run.runStars += value;
     run.starsCollected++;
     run.collectedRate.add(run.time, 1);
     pushCollect(run.collectFeed, star);
@@ -175,7 +185,7 @@ function collectStars(run: RunState, distance: number): void {
 
 /**
  * Advances the run by one frame. `now` is in seconds, on the same clock as
- * input timestamps. Does nothing while paused or once the hero is out.
+ * input timestamps. Does nothing once the hero is out.
  */
 export function stepRun(run: RunState, realDt: number, now: number): void {
   if (run.status !== 'RUNNING') return;
@@ -188,20 +198,42 @@ export function stepRun(run: RunState, realDt: number, now: number): void {
 
   const distance = run.speed * dt;
   run.distance += distance;
+  run.reviveClearRemaining = Math.max(0, run.reviveClearRemaining - distance);
   updatePlayer(run.player, run.input, now, dt);
   stepGround(run.ground, distance);
   moveBarriers(run.barriers, distance);
   moveStars(run.stars, distance);
   const placedBefore = run.spawner.starsPlaced;
-  stepSpawner(run.spawner, run.barriers, run.stars, distance, run.speed, run.time, run.tier, run.gapTime);
+  stepSpawner(
+    run.spawner,
+    run.barriers,
+    run.stars,
+    distance,
+    run.speed,
+    run.time,
+    run.tier,
+    run.gapTime,
+    run.reviveClearRemaining > 0,
+  );
   if (run.spawner.starsPlaced !== placedBefore) run.placedRate.add(run.time, run.spawner.starsPlaced - placedBefore);
   collideBarriers(run, distance);
   collectStars(run, distance);
   if (run.player.safeTimer === 0) run.wasHit = false;
 }
 
-/** Pauses a running run or resumes a paused one. */
-export function togglePause(run: RunState): void {
-  if (run.status === 'RUNNING') run.status = 'PAUSED';
-  else if (run.status === 'PAUSED') run.status = 'RUNNING';
+/**
+ * Brings the hero back after a paid revive (A7): three hearts, two seconds of
+ * safety, no barriers in the next 30 m, and no new rows while that ground passes.
+ */
+export function reviveRun(run: RunState): void {
+  run.status = 'RUNNING';
+  run.hearts = REVIVE.HEARTS;
+  run.player.safeTimer = REVIVE.SAFE_TIME;
+  run.wasHit = false;
+  run.reviveClearRemaining = REVIVE.CLEAR_DISTANCE;
+  const items = run.barriers.items;
+  for (let i = 0; i < items.length; i++) {
+    const barrier = items[i];
+    if (barrier?.active && barrier.z > -REVIVE.CLEAR_DISTANCE) barrier.active = false;
+  }
 }

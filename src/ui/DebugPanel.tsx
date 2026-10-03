@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DEBUG, SPAWNER } from '../config';
 import { activeBarrierCount } from '../game/barriers';
-import { useRunStore } from '../store/runStore';
+import { useGameStore } from '../store/gameStore';
 
 interface Snapshot {
   fps: string;
@@ -20,7 +20,8 @@ interface Snapshot {
 }
 
 function readSnapshot(): Snapshot {
-  const { run, stats } = useRunStore.getState();
+  const { session, stats } = useGameStore.getState();
+  const { run } = session;
   const { player } = run;
   return {
     fps: stats.fps.toFixed(0),
@@ -34,7 +35,7 @@ function readSnapshot(): Snapshot {
     barriers: `${activeBarrierCount(run.barriers)}/${run.barriers.items.length}` +
       (run.barriers.dropped > 0 ? ` (${run.barriers.dropped} dropped)` : ''),
     time: run.time.toFixed(0),
-    stars: run.runStars,
+    stars: run.runStarsCollected,
     placed: run.placedRate.perMinute(run.time).toFixed(0),
     collected: run.collectedRate.perMinute(run.time).toFixed(0),
   };
@@ -45,9 +46,9 @@ const TIER_OPTIONS = SPAWNER.PATTERNS.map((_, tier) => tier);
 
 /** Toggled with the backtick key. Polls the simulation instead of re-rendering every frame. */
 export function DebugPanel() {
-  const visible = useRunStore((state) => state.debugVisible);
-  const forcedTier = useRunStore((state) => state.forcedTier);
-  const setForcedTier = useRunStore((state) => state.setForcedTier);
+  const visible = useGameStore((state) => state.debugVisible);
+  const forcedTier = useGameStore((state) => state.forcedTier);
+  const setForcedTier = useGameStore((state) => state.setForcedTier);
   const [snapshot, setSnapshot] = useState(readSnapshot);
 
   useEffect(() => {

@@ -3,7 +3,7 @@ import { useMemo, useRef } from 'react';
 import { BoxGeometry, MeshStandardMaterial, type Mesh } from 'three';
 import { OBSTACLES, POOLS, RENDER } from '../config';
 import type { Barrier } from '../game/barriers';
-import { useRunStore } from '../store/runStore';
+import { useGameStore } from '../store/gameStore';
 
 const POOL_INDICES = Array.from({ length: POOLS.BARRIERS }, (_, i) => i);
 
@@ -45,7 +45,7 @@ export function Barriers() {
   );
 
   useFrame(() => {
-    const items = useRunStore.getState().run.barriers.items;
+    const items = useGameStore.getState().session.run.barriers.items;
     for (let i = 0; i < meshes.current.length; i++) {
       const mesh = meshes.current[i];
       const barrier = items[i];

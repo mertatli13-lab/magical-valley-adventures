@@ -3,7 +3,7 @@ import { useRef } from 'react';
 import type { Group } from 'three';
 import { GROUND, LANES, POOLS, RENDER } from '../config';
 import { laneX } from '../game/player';
-import { useRunStore } from '../store/runStore';
+import { useGameStore } from '../store/gameStore';
 
 const CHUNK_INDICES = Array.from({ length: POOLS.GROUND_CHUNKS }, (_, i) => i);
 const LANE_INDICES = Array.from({ length: LANES.COUNT }, (_, i) => i);
@@ -43,7 +43,7 @@ export function Ground() {
   const chunks = useRef<(Group | null)[]>([]);
 
   useFrame(() => {
-    const { chunkZ } = useRunStore.getState().run.ground;
+    const { chunkZ } = useGameStore.getState().session.run.ground;
     for (let i = 0; i < chunks.current.length; i++) {
       const chunk = chunks.current[i];
       if (chunk) chunk.position.z = chunkZ[i] ?? 0;
