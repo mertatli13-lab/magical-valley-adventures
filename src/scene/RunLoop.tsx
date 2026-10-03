@@ -9,9 +9,10 @@ const SIMULATION_PRIORITY = -1;
 
 export function RunLoop() {
   useFrame((_, delta) => {
-    const { run, stats } = useRunStore.getState();
+    const { run, stats, syncStatus } = useRunStore.getState();
     if (delta > 0) stats.fps += (1 / delta - stats.fps) * DEBUG.FPS_SMOOTHING;
     stepRun(run, delta, nowSeconds());
+    syncStatus();
   }, SIMULATION_PRIORITY);
   return null;
 }

@@ -62,6 +62,9 @@ export const INPUT_BUFFER_TIME = 0.15;
 /** Lane changes are allowed while in the air. */
 export const LANE_CHANGE_IN_AIR = true;
 
+/** Barriers fit inside a box 1.8 m wide (Blender asset spec). */
+const BARRIER_HALF_WIDTH = 0.9;
+
 /** Barrier sizes in metres. */
 export const OBSTACLES = {
   /** Low: one lane wide, 0.8 m tall; jump over. */
@@ -70,10 +73,11 @@ export const OBSTACLES = {
   HIGH_CLEARANCE: 0.9,
   /** Tall: one lane wide, 3 m tall; change lane. */
   TALL_HEIGHT: 3,
-  /** Barriers fit inside a box 1.8 m wide (Blender asset spec). */
-  HALF_WIDTH: 0.9,
+  HALF_WIDTH: BARRIER_HALF_WIDTH,
   /** Low barriers fit inside a box 0.8 m deep (Blender asset spec). */
   DEPTH: 0.8,
+  /** The "HHH" row is one wide cloud bar across all three lanes. */
+  WIDE_HALF_WIDTH: LANES.WIDTH + BARRIER_HALF_WIDTH,
 } as const;
 
 /** Stars: lines along a lane, arcs over low barriers, a rare big star. */
@@ -315,6 +319,20 @@ export const RENDER = {
   PLAYER_COLOR: '#9b8cff',
   PLAYER_CAP_SEGMENTS: 8,
   PLAYER_RADIAL_SEGMENTS: 16,
+  /** The player blinks this many times per second while safe after a hit. */
+  BLINK_HZ: 8,
+  /** Grey-box barriers. */
+  LOW_COLOR: '#ff9ec7',
+  HIGH_COLOR: '#8fd3ff',
+  TALL_COLOR: '#b48cff',
+  /** Thickness of the grey-box high bar above its 0.9 m clearance. */
+  HIGH_BAR_THICKNESS: 0.5,
+  /** Pop effect when a barrier is hit. */
+  POP_COLOR: '#fff2a8',
+  POP_DURATION: 0.35,
+  POP_START_SCALE: 0.5,
+  POP_END_SCALE: 2.5,
+  POP_SEGMENTS: 16,
   FOG_NEAR: 60,
   FOG_FAR: 130,
   AMBIENT_INTENSITY: 1.1,

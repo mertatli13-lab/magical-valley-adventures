@@ -81,3 +81,24 @@ body,
   margin: 0;
   text-align: right;
 }
+
+.debug-panel select {
+  pointer-events: auto;
+  font: inherit;
+}
+
+.out-banner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 48px;
+  min-height: 48px;
+  padding: 16px 32px;
+  border: none;
+  border-radius: 16px;
+  background: rgba(228, 106, 166, 0.92);
+  color: #ffffff;
+  font: 800 clamp(24px, 5vw, 48px) 'Trebuchet MS', system-ui, sans-serif;
+  cursor: pointer;
+}

@@ -17,6 +17,8 @@ export function Player() {
     const { player } = useRunStore.getState().run;
     body.position.set(player.x, player.y + player.height / 2, PLAYER.Z);
     body.scale.y = player.height / PLAYER.STAND_HEIGHT;
+    // Blink while safe: visible for the first half of each blink period.
+    body.visible = player.safeTimer <= 0 || (player.safeTimer * RENDER.BLINK_HZ) % 1 >= 0.5;
   });
 
   return (

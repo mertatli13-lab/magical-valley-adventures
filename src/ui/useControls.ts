@@ -3,6 +3,9 @@ import { DEBUG } from '../config';
 import { keyToAction, swipeToAction } from '../game/input';
 import { useRunStore } from '../store/runStore';
 
+/** Restarts the run from the temporary OUT text (Phase 2; replaced by the Out screen in Phase 4). */
+const RESTART_KEY = 'KeyR';
+
 /** Seconds on the same clock the render loop uses to consume the input buffer. */
 export function nowSeconds(): number {
   return performance.now() / 1000;
@@ -14,7 +17,7 @@ export function nowSeconds(): number {
  */
 export function useControls(): void {
   useEffect(() => {
-    const { run, toggleDebug } = useRunStore.getState();
+    const { run, toggleDebug, restart } = useRunStore.getState();
     let startX = 0;
     let startY = 0;
     let tracking = false;
@@ -22,6 +25,10 @@ export function useControls(): void {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.code === DEBUG.TOGGLE_KEY) {
         if (!event.repeat) toggleDebug();
+        return;
+      }
+      if (event.code === RESTART_KEY) {
+        if (!event.repeat && run.status === 'OUT') restart();
         return;
       }
       const action = keyToAction(event.code);

@@ -1,7 +1,9 @@
 import { Canvas } from '@react-three/fiber';
 import { CAMERA, RENDER } from '../config';
+import { Barriers } from './Barriers';
 import { CameraRig } from './CameraRig';
 import { Ground } from './Ground';
+import { HitPop } from './HitPop';
 import { Player } from './Player';
 import { RunLoop } from './RunLoop';
 
@@ -25,6 +27,8 @@ export function GameScene() {
       <RunLoop />
       <CameraRig />
       <Ground />
+      <Barriers />
+      <HitPop />
       <Player />
     </Canvas>
   );
