@@ -19,6 +19,7 @@ Production builds leave the panel and its commands out.
 - Blender exports go in `art/models/`; `npm run optimize:models` compresses them into
   `public/models/`. File names and conventions: [public/models/README.md](public/models/README.md).
 - Landing artwork: [public/ui/landing/README.md](public/ui/landing/README.md).
+- Select artwork: [public/ui/select/README.md](public/ui/select/README.md).
 - Audio (MP3): [public/audio/README.md](public/audio/README.md).
 
 Anything missing falls back to a placeholder (or silence), so the game always runs.

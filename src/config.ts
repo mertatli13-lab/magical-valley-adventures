@@ -375,8 +375,8 @@ export const SCREENS = {
   SKY_CAMERA_POSITION: [0, 12, 7.5],
   SKY_LOOK_AT: [0, 15, -6],
   /** Camera on the character select stage. */
-  SELECT_CAMERA_POSITION: [0, 2.6, 7.5],
-  SELECT_LOOK_AT: [0, 1, 0],
+  SELECT_CAMERA_POSITION: [0, 2.6, 6.4],
+  SELECT_LOOK_AT: [0, 0.55, 0],
 } as const;
 
 export const STAGE = {
@@ -386,17 +386,58 @@ export const STAGE = {
   PODIUM_HEIGHT: 0.5,
   /** Characters stand on a ring this far from the centre. */
   RING_RADIUS: 2.2,
+  /** Characters stand this much larger on the stage than in the run, so they fill it as in the reference art. */
+  CHARACTER_SCALE: 1.45,
   /** How high the focused character hops onto the podium. */
   HOP_HEIGHT: 0.8,
   /** How fast the stage turns and the focus moves, per second. */
   ROTATE_RATE: 8,
   FOCUS_RATE: 6,
-  SEGMENTS: 48,
-  COLOR: '#3b2d6b',
-  GLOW_COLOR: '#8f6bff',
-  GLOW_INTENSITY: 0.6,
+  SEGMENTS: 64,
+  /** Pearly stage surface. */
+  COLOR: '#e9e2ff',
+  SHEEN_COLOR: '#ffd9f4',
+  ROUGHNESS: 0.35,
+  CLEARCOAT: 1,
+  IRIDESCENCE: 0.7,
+  GLOW_COLOR: '#9d86e8',
+  GLOW_INTENSITY: 0.35,
+  /** Stage top: pearl gradient with one curved groove between each character's slot. */
+  TOP_TEXTURE_SIZE: 512,
+  TOP_CENTER_COLOR: '#ffffff',
+  TOP_EDGE_COLOR: '#d2c6f5',
+  GROOVE_COLOR: 'rgba(120, 95, 200, 0.8)',
+  GROOVE_HIGHLIGHT: 'rgba(255, 255, 255, 0.7)',
+  /** How far each groove curls round, in radians, from the podium to the rim. */
+  GROOVE_CURL: 0.55,
+  GROOVE_WIDTH: 8,
+  /** Glowing rims round the stage and podium edges. */
+  RIM_COLOR: '#fbf3ff',
+  RIM_THICKNESS: 0.035,
+  RIM_TUBE_SEGMENTS: 8,
+  RIM_RING_SEGMENTS: 128,
+  /** Soft lilac glow on the ground under the stage, as a multiple of the stage radius. */
+  POOL_SCALE: 2.6,
+  POOL_COLOR: '#a98bff',
+  POOL_OPACITY: 0.55,
+  /** Moonbeams shining down onto the podium. */
+  BEAM_COUNT: 3,
+  BEAM_HEIGHT: 9,
+  BEAM_TOP_RADIUS: 0.25,
+  BEAM_BOTTOM_RADIUS: 1.5,
+  BEAM_COLOR: '#efe6ff',
+  BEAM_OPACITY: 0.16,
+  /** Sideways tilt of the outer beams, in radians, and their slow sway. */
+  BEAM_TILT: 0.22,
+  BEAM_SWAY: 0.04,
+  BEAM_SWAY_SPEED: 0.4,
+  BEAM_SEGMENTS: 32,
   /** Price tag height above a locked character's head. */
   TAG_OFFSET: 0.35,
+  /** Soft front light from the camera's side so the characters' faces read brightly. */
+  KEY_LIGHT_COLOR: '#fff4ec',
+  KEY_LIGHT_POSITION: [1.5, 4, 8],
+  KEY_LIGHT_INTENSITY: 1.6,
   /** Soft light over the stage so the characters read at night. */
   LIGHT_POSITION: [0, 5, 3],
   LIGHT_INTENSITY: 40,
@@ -417,15 +458,26 @@ export const NIGHT = {
   TREE_COLOR: '#1f3b3a',
   TRUNK_COLOR: '#3a2a22',
   TREE_SEGMENTS: 8,
-  FIREFLY_COUNT: 40,
+  FIREFLY_COUNT: 70,
   /** Fireflies drift inside a box around the stage, from this far out. */
   FIREFLY_SPREAD: 9,
+  /** Nearest a firefly comes toward the camera (z), so none drift up close and look huge. */
+  FIREFLY_MAX_Z: 3.5,
   FIREFLY_MIN_Y: 0.5,
   FIREFLY_MAX_Y: 3.5,
   FIREFLY_BOB: 0.25,
   FIREFLY_SPEED: 1.5,
-  FIREFLY_SIZE: 0.15,
-  FIREFLY_COLOR: '#fff59d',
+  FIREFLY_SIZE: 0.32,
+  FIREFLY_COLOR: '#ffe58a',
+  /** Fireflies are drawn as small glowing stars. */
+  FIREFLY_TEXTURE_SIZE: 64,
+  FIREFLY_STAR_POINTS: 5,
+  /** Inner radius of the star shape, as a share of its outer radius. */
+  FIREFLY_STAR_INNER: 0.45,
+  /** Painted forest behind the stage (public/ui/select/). Without it, the trees above stand in. */
+  BACKDROP_DISTANCE: 40,
+  /** Slight overscan so the edges never show while the camera settles. */
+  BACKDROP_OVERSCAN: 1.04,
   /** Fixed seed so the forest looks the same every time. */
   SEED: 7,
 } as const;
@@ -609,6 +661,16 @@ export const MODELS = {
   /** Blender exports face +z, toward the camera; turn them to run away from it. */
   FACES_CAMERA: true,
   FACE_AWAY_YAW: Math.PI,
+  /** A clip whose root bone faces further than this (radians) from its rest heading is turned back to face forward. */
+  HEADING_TOLERANCE: 0.15,
+  /**
+   * Auto-rigged idles often look around, turning the hips, spine and head far
+   * to each side (Meshy's default idle swings about 45 degrees). In the Idle
+   * clip, those bones keep only this share of their turn, so the character
+   * stays facing forward on the stage while still moving.
+   */
+  IDLE_TURN_KEEP: 0.3,
+  IDLE_STEADY_BONES: ['Hips', 'Spine', 'Neck', 'Head'],
   /** Files downloaded at once while loading. */
   PARALLEL_LOADS: 6,
 } as const;

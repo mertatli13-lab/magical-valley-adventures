@@ -553,11 +553,6 @@ button {
   font-family: var(--font);
 }
 
-.select-screen .screen-heading {
-  color: #ffffff;
-  text-shadow: 0 3px 0 var(--lilac);
-}
-
 .select-bar {
   display: flex;
   align-items: center;
@@ -570,6 +565,7 @@ button {
   min-width: 180px;
   text-align: center;
   color: #ffffff;
+  text-shadow: 0 2px 8px rgba(30, 20, 70, 0.85);
 }
 
 .select-name {
@@ -580,6 +576,21 @@ button {
 .select-price {
   font-size: 16px;
   opacity: 0.85;
+}
+
+/* Glowing pill, as in the reference art. */
+.choose-button {
+  min-width: 240px;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  background: rgba(46, 34, 92, 0.55);
+  box-shadow:
+    0 0 18px 4px rgba(255, 255, 255, 0.55),
+    inset 0 0 14px rgba(255, 255, 255, 0.35);
+  font-size: 30px;
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 6px rgba(46, 34, 92, 0.6);
+  backdrop-filter: blur(4px);
 }
 
 .stage-tag {
@@ -858,10 +869,6 @@ button {
 
   .landing-character.slot-4 {
     margin-left: calc(clamp(64px, 22vh, 110px) / -2);
-  }
-
-  .select-screen .screen-heading {
-    font-size: 26px;
   }
 
   .select-bar {
