@@ -50,6 +50,9 @@ export const SCENERY_MODELS: readonly string[] = [
 /** Named empties on each character where accessories attach. */
 export const ATTACH_EMPTIES = ['acc_head', 'acc_neck', 'acc_back'] as const;
 
+/** The joint each attach point follows on a model that has no empties (auto-rigged models). */
+export const ATTACH_BONES = { acc_head: 'head_end', acc_neck: 'neck', acc_back: 'Spine' } as const;
+
 export const ALL_MODELS: readonly string[] = [
   ...Object.values(CHARACTER_MODELS),
   ...Object.values(BARRIER_MODELS).flat(),

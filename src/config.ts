@@ -465,30 +465,90 @@ export const CHARACTER_POSES = {
 } as const;
 
 /**
- * Placeholder accessories until the real models arrive (Phase 6). Each is a
- * simple shape at its attach point: `size` is [width, height, depth] for a
- * box, [radius, height] for a cone, [radius, tube] for a torus and [radius]
- * for a sphere. `lift` raises it and `back` moves it behind the hero (+z).
+ * Accessories built in code (used until a modelled GLB exists for an item).
+ * Colours per item; the shapes are in src/scene/accessoryShapes.ts.
  */
 export const ACCESSORY_LOOKS = {
-  bow: { shape: 'box', color: '#ff5c9a', size: [0.32, 0.14, 0.1], lift: 0.02, back: 0 },
-  scarf: { shape: 'torus', color: '#ff8a65', size: [0.3, 0.07], lift: 0, back: 0 },
-  'flower-crown': { shape: 'torus', color: '#ffb3d9', size: [0.24, 0.06], lift: 0, back: 0 },
-  'star-glasses': { shape: 'box', color: '#ffd84d', size: [0.5, 0.12, 0.05], lift: -0.2, back: -0.32 },
-  cape: { shape: 'box', color: '#e53935', size: [0.6, 0.75, 0.04], lift: -0.3, back: 0.38 },
-  'wizard-hat': { shape: 'cone', color: '#5e35b1', size: [0.3, 0.6], lift: 0.3, back: 0 },
-  backpack: { shape: 'box', color: '#a1887f', size: [0.42, 0.45, 0.2], lift: -0.1, back: 0.42 },
-  'party-hat': { shape: 'cone', color: '#26c6da', size: [0.2, 0.45], lift: 0.22, back: 0 },
-  'sparkle-trail': { shape: 'sphere', color: '#fff59d', size: [0.1], lift: 0, back: 0.4 },
-  'glowing-wings': { shape: 'box', color: '#e1f5fe', size: [1, 0.4, 0.04], lift: 0, back: 0.38 },
+  bow: { main: '#ff5c9a', dark: '#e0407f' },
+  scarf: { main: '#ff8a65', stripe: '#fff3e0' },
+  'flower-crown': { vine: '#8bd17c', centre: '#ffd84d', petals: ['#ff8fbc', '#ffffff', '#c9a4ff'] },
+  'star-glasses': { frame: '#ffd84d', lens: '#ff7eb6' },
+  cape: { main: '#e53950', trim: '#ffd84d' },
+  'wizard-hat': { main: '#6a3fd0', band: '#ffd84d', stars: '#fff59d' },
+  backpack: { main: '#7fdcc6', pocket: '#c9a4ff', flap: '#ff8fbc', straps: '#fff3e0', charm: '#ffd84d' },
+  'party-hat': { bands: ['#26c6da', '#ffd84d', '#ff7eb6', '#c9a4ff'], trim: '#ffffff' },
+  'sparkle-trail': { main: '#fff59d' },
+  'glowing-wings': { main: '#d6f4ff', tip: '#ffc1e6', glow: '#8fe3ff' },
 } as const;
 
-/** Where each attach point sits, as a share of the hero's current height. */
-export const ATTACH_HEIGHTS = {
+/** How the moving accessory parts behave. Cosmetic only. */
+export const ACCESSORY_MOTION = {
+  /** Wings: resting sweep-back angle, flap size (radians) and flaps per second. */
+  WING_REST: 0.55,
+  WING_FLAP: 0.4,
+  WING_RATE: 2.2,
+  WING_GLOW: 0.7,
+  /** Cape: how far it swings out behind standing still and running, flutter size (radians), flutters per second. */
+  CAPE_REST: 0.06,
+  CAPE_LIFT: 0.2,
+  CAPE_FLUTTER: 0.12,
+  CAPE_RATE: 1.6,
+  /** Scarf tails: the same four settings. */
+  SCARF_REST: 0.15,
+  SCARF_LIFT: 0.95,
+  SCARF_WAVE: 0.25,
+  SCARF_RATE: 2.4,
+  /** How much of the flutter and wave remains when standing still (0 to 1). */
+  CALM: 0.3,
+  /** Sparkles: twinkles per second and how far they shrink (0 to 1). */
+  SPARKLE_RATE: 1.5,
+  SPARKLE_SHRINK: 0.5,
+  SPARKLE_GLOW: 0.9,
+  /** Soft plush surface for every accessory. */
+  ROUGHNESS: 0.85,
+} as const;
+
+/** Named points on each character where accessories attach (Blender asset spec: empties with these names). */
+export type AttachPoint = 'acc_head' | 'acc_neck' | 'acc_back';
+
+/**
+ * How accessories fit a body, in metres. `head`, `neck`: radius; `eyes`: how far
+ * below the top of the head the eyes sit; `face`: how far the face is in front of
+ * the head's centre line; `shoulders`: half the shoulder width; `body`: size of
+ * back items (cape, backpack, wings) compared with the grey-box capsule.
+ */
+export interface AccessoryFit {
+  readonly head: number;
+  readonly neck: number;
+  readonly eyes: number;
+  readonly face: number;
+  readonly shoulders: number;
+  readonly body: number;
+}
+
+/** The grey-box capsule, and any character without its own entry below. */
+export const DEFAULT_FIT: AccessoryFit = { head: 0.35, neck: 0.35, eyes: 0.35, face: 0.35, shoulders: 0.33, body: 1 };
+
+/**
+ * Characters with a model: their fit, and each attach point as an offset in
+ * metres (sideways, up, behind) from its joint on the resting model: the top
+ * of the head from the head-end joint, the neck from the neck joint and the
+ * upper back from the spine joint. Used when the model has no acc_head,
+ * acc_neck and acc_back empties.
+ */
+export const MODEL_FITS: Readonly<Record<string, { fit: AccessoryFit; points: Record<AttachPoint, readonly [number, number, number]> }>> = {
+  strawberry: {
+    fit: { head: 0.17, neck: 0.09, eyes: 0.12, face: 0.15, shoulders: 0.16, body: 0.62 },
+    points: { acc_head: [0, 0.06, -0.1], acc_neck: [0, 0.03, -0.06], acc_back: [0, -0.03, 0.07] },
+  },
+};
+
+/** Where each attach point sits on the capsule, as a share of the hero's current height. */
+export const ATTACH_HEIGHTS: Readonly<Record<AttachPoint, number>> = {
   acc_head: 1,
   acc_neck: 0.72,
   acc_back: 0.62,
-} as const;
+};
 
 /** Placeholder looks for the signature moves. Cosmetic only. */
 export const MOVE_LOOKS = {
@@ -510,6 +570,10 @@ export const MOVE_LOOKS = {
   TRAIL_WOBBLE_RATE: 12,
   RAINBOW: ['#ff5252', '#ffa726', '#ffee58', '#66bb6a', '#42a5f5', '#7e57c2', '#ec407a'],
   SPARKLE_COLOR: '#fff59d',
+  /** Sparkle trail twinkles: size (m), spin (radians per second) and how far they bob (m). */
+  TWINKLE_SIZE: 0.22,
+  TWINKLE_SPIN: 3,
+  TWINKLE_BOB: 0.18,
   SEGMENTS: 8,
 } as const;
 
