@@ -553,11 +553,6 @@ button {
   font-family: var(--font);
 }
 
-.select-screen .screen-heading {
-  color: #ffffff;
-  text-shadow: 0 3px 0 var(--lilac);
-}
-
 .select-bar {
   display: flex;
   align-items: center;
@@ -570,6 +565,7 @@ button {
   min-width: 180px;
   text-align: center;
   color: #ffffff;
+  text-shadow: 0 2px 8px rgba(30, 20, 70, 0.85);
 }
 
 .select-name {
@@ -873,10 +869,6 @@ button {
 
   .landing-character.slot-4 {
     margin-left: calc(clamp(64px, 22vh, 110px) / -2);
-  }
-
-  .select-screen .screen-heading {
-    font-size: 26px;
   }
 
   .select-bar {

@@ -18,6 +18,7 @@ import { CLIP_NAMES, clipFor, LOOPING_CLIPS, runPlaybackRate, type ClipName, typ
 import { ACCESSORIES } from '../game/catalogue';
 import { frameDt } from '../game/run';
 import { makeAccessoryPlaceholder } from './accessoryShapes';
+import { faceForward, rootBone } from './clipHeading';
 import { ACCESSORY_MODELS } from './assetManifest';
 import { getModel, isSettled, requestModel } from './assets';
 
@@ -57,6 +58,7 @@ export function CharacterModel({ gltf, name, frame, onClip, facesCamera = false 
     const root = cloneSkinned(gltf.scene);
     if (MODELS.FACES_CAMERA !== facesCamera) root.rotation.y = MODELS.FACE_AWAY_YAW;
     const mixer = new AnimationMixer(root);
+    const bone = rootBone(root);
     const actions = new Map<ClipName, AnimationAction>();
     for (const clipName of CLIP_NAMES) {
       const clip = gltf.animations.find((c) => c.name === clipName);
@@ -68,7 +70,7 @@ export function CharacterModel({ gltf, name, frame, onClip, facesCamera = false 
         }
         continue;
       }
-      const action = mixer.clipAction(clip);
+      const action = mixer.clipAction(bone ? faceForward(clip, bone) : clip);
       const loops = LOOPING_CLIPS.has(clipName);
       action.setLoop(loops ? LoopRepeat : LoopOnce, Infinity);
       action.clampWhenFinished = !loops;

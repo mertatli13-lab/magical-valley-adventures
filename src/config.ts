@@ -390,8 +390,8 @@ export const SCREENS = {
   SKY_CAMERA_POSITION: [0, 12, 7.5],
   SKY_LOOK_AT: [0, 15, -6],
   /** Camera on the character select stage. */
-  SELECT_CAMERA_POSITION: [0, 2.6, 7.5],
-  SELECT_LOOK_AT: [0, 1, 0],
+  SELECT_CAMERA_POSITION: [0, 2.6, 6.4],
+  SELECT_LOOK_AT: [0, 0.55, 0],
 } as const;
 
 export const STAGE = {
@@ -447,6 +447,10 @@ export const STAGE = {
   BEAM_SEGMENTS: 32,
   /** Price tag height above a locked character's head. */
   TAG_OFFSET: 0.35,
+  /** Soft front light from the camera's side so the characters' faces read brightly. */
+  KEY_LIGHT_COLOR: '#fff4ec',
+  KEY_LIGHT_POSITION: [1.5, 4, 8],
+  KEY_LIGHT_INTENSITY: 1.6,
   /** Soft light over the stage so the characters read at night. */
   LIGHT_POSITION: [0, 5, 3],
   LIGHT_INTENSITY: 40,
@@ -574,6 +578,8 @@ export const MODELS = {
   /** Blender exports face +z, toward the camera; turn them to run away from it. */
   FACES_CAMERA: true,
   FACE_AWAY_YAW: Math.PI,
+  /** A clip whose root bone faces further than this (radians) from its rest heading is turned back to face forward. */
+  HEADING_TOLERANCE: 0.15,
   /** Files downloaded at once while loading. */
   PARALLEL_LOADS: 6,
 } as const;

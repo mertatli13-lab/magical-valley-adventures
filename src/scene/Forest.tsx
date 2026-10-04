@@ -394,6 +394,7 @@ export function Forest() {
   return (
     <group ref={root}>
       <pointLight position={[...STAGE.LIGHT_POSITION]} intensity={STAGE.LIGHT_INTENSITY} distance={STAGE.LIGHT_DISTANCE} />
+      <directionalLight color={STAGE.KEY_LIGHT_COLOR} position={[...STAGE.KEY_LIGHT_POSITION]} intensity={STAGE.KEY_LIGHT_INTENSITY} />
       <group ref={stage}>
         <Stage />
         <StageCharacters />

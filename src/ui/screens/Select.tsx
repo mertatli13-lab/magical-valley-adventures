@@ -42,7 +42,6 @@ export function Select() {
   return (
     <div className="select-screen">
       <PriceTags />
-      <h2 className="screen-heading">Choose your hero</h2>
       <div className="select-bar">
         <button type="button" className="round-button" aria-label="Previous" onClick={() => act((s) => s.rotate(-1))}>
           ‹
