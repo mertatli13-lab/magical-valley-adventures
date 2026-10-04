@@ -29,6 +29,8 @@ export function GameScene() {
   return (
     <Canvas
       className="scene"
+      // No tone mapping: the pastel colours in config reach the screen as written instead of greyed.
+      flat
       dpr={dpr}
       camera={{
         position: [...SCREENS.SKY_CAMERA_POSITION],

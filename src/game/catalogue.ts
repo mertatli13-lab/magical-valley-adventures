@@ -1,4 +1,4 @@
-import { ACCESSORY_TIERS, CHARACTER_NAMES, CHARACTER_PRICES, SIGNATURE_MOVE_PRICE } from '../config';
+import { ACCESSORY_TIERS, CHARACTER_NAMES, CHARACTER_PRICES, SIGNATURE_MOVE_PRICE, type AttachPoint } from '../config';
 
 // ---------------------------------------------------------------------------
 // Characters
@@ -60,8 +60,7 @@ export function moveFor(character: CharacterId): SignatureMoveInfo | undefined {
 
 export type AccessoryTier = keyof typeof ACCESSORY_TIERS;
 
-/** Named empties on each character model where accessories attach (Blender asset spec). */
-export type AttachPoint = 'acc_head' | 'acc_neck' | 'acc_back';
+export type { AttachPoint };
 
 export interface AccessoryInfo {
   id: string;
