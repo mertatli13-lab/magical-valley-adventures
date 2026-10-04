@@ -43,17 +43,19 @@ interface Props {
   frame: () => CharacterFrame;
   /** Reports the clip now playing (debug panel). */
   onClip?: (clip: ClipName) => void;
+  /** Keep the model facing the camera (the selection stage) instead of running away from it. */
+  facesCamera?: boolean;
 }
 
 /**
  * A character model with its eight clips mapped by exact name, cross-fading
  * in 0.1 s. The model is cloned (so the same file can appear on the stage and
- * in the run) and turned to face away from the camera.
+ * in the run) and turned to face away from the camera, unless it is on the stage.
  */
-export function CharacterModel({ gltf, name, frame, onClip }: Props) {
+export function CharacterModel({ gltf, name, frame, onClip, facesCamera = false }: Props) {
   const { root, mixer, actions, meshes, originals } = useMemo(() => {
     const root = cloneSkinned(gltf.scene);
-    if (MODELS.FACES_CAMERA) root.rotation.y = MODELS.FACE_AWAY_YAW;
+    if (MODELS.FACES_CAMERA !== facesCamera) root.rotation.y = MODELS.FACE_AWAY_YAW;
     const mixer = new AnimationMixer(root);
     const actions = new Map<ClipName, AnimationAction>();
     for (const clipName of CLIP_NAMES) {
@@ -78,7 +80,7 @@ export function CharacterModel({ gltf, name, frame, onClip }: Props) {
     });
     const originals = meshes.map((mesh) => mesh.material as Material | Material[]);
     return { root, mixer, actions, meshes, originals };
-  }, [gltf, name]);
+  }, [gltf, name, facesCamera]);
 
   const current = useRef<ClipName | null>(null);
   const dark = useRef(false);
@@ -88,7 +90,15 @@ export function CharacterModel({ gltf, name, frame, onClip }: Props) {
     waitingFor: null,
   });
 
-  useEffect(() => () => void mixer.stopAllAction(), [mixer]);
+  // Stopping the clips also forgets which one was playing, so a remount starts it again.
+  // (React's StrictMode remounts every component once in development.)
+  useEffect(
+    () => () => {
+      mixer.stopAllAction();
+      current.current = null;
+    },
+    [mixer],
+  );
 
   useFrame((_, delta) => {
     const state = frame();
