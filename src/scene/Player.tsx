@@ -1,6 +1,6 @@
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
-import { MeshStandardMaterial, type Group, type Mesh } from 'three';
+import { MeshStandardMaterial, SphereGeometry, type Group, type Mesh } from 'three';
 import {
   ATTACH_HEIGHTS,
   BLOB_SHADOW,
@@ -16,7 +16,7 @@ import type { ClipName, PoseInput } from '../game/animation';
 import { ACCESSORIES, type AccessoryInfo, type CharacterId, type SignatureMoveInfo } from '../game/catalogue';
 import type { Session } from '../game/session';
 import { useGameStore } from '../store/gameStore';
-import { makeAccessoryPlaceholder } from './accessoryShapes';
+import { animateAccessory, makeAccessory, twinkleGeometry } from './accessoryShapes';
 import { ACCESSORY_MODELS, CHARACTER_MODELS } from './assetManifest';
 import { getModel } from './assets';
 import { BlobShadow } from './BlobShadow';
@@ -50,7 +50,7 @@ function Capsule({ equipment }: { equipment: { current: Equipment } }) {
   const pivot = useRef<Group>(null);
   const body = useRef<Mesh>(null);
   const accessories = useRef<(Group | null)[]>([]);
-  const placeholders = useMemo(() => ACCESSORIES.map((item) => makeAccessoryPlaceholder(item.id)), []);
+  const placeholders = useMemo(() => ACCESSORIES.map((item) => makeAccessory(item.id)), []);
   const shownCharacter = useRef('');
 
   useFrame(({ clock }) => {
@@ -101,7 +101,10 @@ function Capsule({ equipment }: { equipment: { current: Equipment } }) {
       const item = ACCESSORIES[i];
       if (!group || !item) continue;
       group.visible = item === accessory && item.id !== TRAIL_ACCESSORY;
-      if (group.visible) group.position.y = player.height * (ATTACH_HEIGHTS[item.attach] - 0.5);
+      if (!group.visible) continue;
+      // Back items sit on the capsule's surface; head and neck items on its centre line.
+      group.position.set(0, player.height * (ATTACH_HEIGHTS[item.attach] - 0.5), item.attach === 'acc_back' ? RADIUS : 0);
+      animateAccessory(placeholders[i] ?? null, clock.elapsedTime, session.screen === 'RUN' ? 1 : 0);
     }
   });
 
@@ -136,6 +139,14 @@ export function Player() {
   const hit = useRef({ count: 0, at: -Infinity });
   const clock = useRef(0);
   const beadMaterials = useMemo(() => TRAIL_INDICES.map(() => new MeshStandardMaterial({ emissiveIntensity: 0.6 })), []);
+  // Rainbow dash trails round beads; the sparkle trail trails four-pointed twinkles.
+  const beadShapes = useMemo(
+    () => ({
+      ball: new SphereGeometry(MOVE_LOOKS.TRAIL_SIZE, MOVE_LOOKS.SEGMENTS, MOVE_LOOKS.SEGMENTS),
+      twinkle: twinkleGeometry().scale(MOVE_LOOKS.TWINKLE_SIZE, MOVE_LOOKS.TWINKLE_SIZE, MOVE_LOOKS.TWINKLE_SIZE),
+    }),
+    [],
+  );
   const shownTrail = useRef('');
   const frameState = useRef<CharacterFrame>({
     pose: { pose: 'run', airborne: false, sliding: false, hitAge: Infinity, signature: null },
@@ -206,6 +217,7 @@ export function Player() {
         material.color.set(color);
         material.emissive.set(color);
       });
+      for (const bead of beads.current) if (bead) bead.geometry = trail === 'sparkle' ? beadShapes.twinkle : beadShapes.ball;
     }
     for (let i = 0; i < beads.current.length; i++) {
       const bead = beads.current[i];
@@ -214,6 +226,15 @@ export function Player() {
       if (!bead.visible) continue;
       const wobble = Math.sin(state.clock.elapsedTime * MOVE_LOOKS.TRAIL_WOBBLE_RATE + i) * MOVE_LOOKS.TRAIL_WOBBLE;
       bead.position.set(player.x + wobble, player.y + MOVE_LOOKS.TRAIL_HEIGHT, PLAYER.Z + (i + 1) * MOVE_LOOKS.TRAIL_SPACING);
+      if (trail === 'sparkle') {
+        // Twinkles spin, bob at different heights and shrink toward the end of the trail.
+        bead.rotation.z = state.clock.elapsedTime * MOVE_LOOKS.TWINKLE_SPIN + i;
+        bead.position.y += Math.sin(state.clock.elapsedTime * MOVE_LOOKS.TRAIL_WOBBLE_RATE * 0.5 + i * 2) * MOVE_LOOKS.TWINKLE_BOB + MOVE_LOOKS.TWINKLE_BOB;
+        bead.scale.setScalar(1 - i / (beads.current.length + 1));
+      } else {
+        bead.rotation.z = 0;
+        bead.scale.setScalar(1);
+      }
     }
   });
 
@@ -228,9 +249,7 @@ export function Player() {
       </group>
       <BlobShadow ref={shadow} />
       {TRAIL_INDICES.map((i) => (
-        <mesh key={i} ref={(bead) => void (beads.current[i] = bead)} material={beadMaterials[i]} visible={false}>
-          <sphereGeometry args={[MOVE_LOOKS.TRAIL_SIZE, MOVE_LOOKS.SEGMENTS, MOVE_LOOKS.SEGMENTS]} />
-        </mesh>
+        <mesh key={i} ref={(bead) => void (beads.current[i] = bead)} geometry={beadShapes.ball} material={beadMaterials[i]} visible={false} />
       ))}
     </>
   );

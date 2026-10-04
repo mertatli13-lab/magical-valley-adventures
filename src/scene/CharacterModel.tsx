@@ -5,23 +5,63 @@ import {
   Box3,
   LoopOnce,
   LoopRepeat,
+  Group,
+  Matrix4,
   MeshStandardMaterial,
+  Quaternion,
+  Vector3,
   type AnimationAction,
   type Material,
   type Mesh,
   type Object3D,
+  type SkinnedMesh,
 } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { CHARACTER_POSES, MODELS } from '../config';
+import { CHARACTER_POSES, DEFAULT_FIT, MODEL_FITS, MODELS } from '../config';
 import { CLIP_NAMES, clipFor, LOOPING_CLIPS, runPlaybackRate, type ClipName, type PoseInput } from '../game/animation';
-import { ACCESSORIES } from '../game/catalogue';
+import { ACCESSORIES, type AttachPoint } from '../game/catalogue';
 import { frameDt } from '../game/run';
-import { makeAccessoryPlaceholder } from './accessoryShapes';
-import { ACCESSORY_MODELS } from './assetManifest';
+import { animateAccessory, makeAccessory } from './accessoryShapes';
+import { ACCESSORY_MODELS, ATTACH_BONES } from './assetManifest';
 import { getModel, isSettled, requestModel } from './assets';
 
 const lockedMaterial = new MeshStandardMaterial({ color: CHARACTER_POSES.LOCKED_COLOR });
+const TURN_AROUND = new Quaternion().setFromAxisAngle(new Vector3(0, 1, 0), Math.PI);
+
+/**
+ * An attach point for a model without acc_* empties: a group fixed to the joint
+ * for that point, moved by the offset in MODEL_FITS and turned so that, with the
+ * model at rest, its y is up and its +z points behind the character, as the
+ * accessory shapes expect. It is sized in metres whatever units the rig uses.
+ */
+function boneAnchor(root: Object3D, name: string, point: AttachPoint): Object3D | null {
+  const offset = MODEL_FITS[name]?.points[point];
+  let skinned: SkinnedMesh | null = null;
+  root.traverse((object) => {
+    if ((object as SkinnedMesh).isSkinnedMesh) skinned ??= object as SkinnedMesh;
+  });
+  const skeleton = (skinned as SkinnedMesh | null)?.skeleton;
+  const index = skeleton?.bones.findIndex((bone) => bone.name === ATTACH_BONES[point]) ?? -1;
+  const bone = skeleton?.bones[index];
+  const inverse = skeleton?.boneInverses[index];
+  if (!offset || !bone || !inverse) return null;
+  // The joint's direction in the resting model, and the rig's units (e.g. centimetres under a 0.01 scale).
+  const rest = new Quaternion();
+  new Matrix4().copy(inverse).invert().decompose(new Vector3(), rest, new Vector3());
+  let unit = 1;
+  for (let node: Object3D | null = bone; node && node !== root; node = node.parent) unit *= node.scale.x;
+  const toJoint = rest.clone().invert();
+  const anchor = new Group();
+  anchor.name = point;
+  // The model faces +z, so "behind" is -z in the model's own space.
+  anchor.position.set(offset[0], offset[1], -offset[2]).applyQuaternion(toJoint).divideScalar(unit);
+  anchor.quaternion.copy(toJoint).multiply(TURN_AROUND);
+  anchor.scale.setScalar(1 / unit);
+  bone.add(anchor);
+  return anchor;
+}
+
 const warnedMissingClips = new Set<string>();
 
 export interface CharacterFrame {
@@ -89,6 +129,7 @@ export function CharacterModel({ gltf, name, frame, onClip, facesCamera = false 
     object: null,
     waitingFor: null,
   });
+  const clock = useRef(0);
 
   // Stopping the clips also forgets which one was playing, so a remount starts it again.
   // (React's StrictMode remounts every component once in development.)
@@ -142,8 +183,8 @@ export function CharacterModel({ gltf, name, frame, onClip, facesCamera = false 
           accessory.current.waitingFor = path;
         }
         const model = getModel(path);
-        const object = model ? cloneSkinned(model.scene) : makeAccessoryPlaceholder(item.id);
-        const empty = root.getObjectByName(item.attach);
+        const object = model ? cloneSkinned(model.scene) : makeAccessory(item.id, MODEL_FITS[name]?.fit ?? DEFAULT_FIT);
+        const empty = root.getObjectByName(item.attach) ?? boneAnchor(root, name, item.attach);
         if (empty) empty.add(object);
         else {
           object.position.y = new Box3().setFromObject(root).max.y;
@@ -152,6 +193,9 @@ export function CharacterModel({ gltf, name, frame, onClip, facesCamera = false 
         accessory.current.object = object;
       }
     }
+    if (!state.frozen) clock.current += frameDt(delta);
+    // Capes and scarf tails stream out while the character runs, and hang while it stands.
+    animateAccessory(accessory.current.object, clock.current, state.pose.pose === 'run' ? 1 : 0);
   });
 
   return <primitive object={root} />;
