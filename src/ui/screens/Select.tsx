@@ -57,7 +57,7 @@ export function Select() {
       </div>
       <button
         type="button"
-        className="primary-button"
+        className="primary-button choose-button"
         autoFocus
         onClick={() => act((s) => (owned ? s.choose() : s.tapLocked()))}
       >
