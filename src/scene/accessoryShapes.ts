@@ -4,26 +4,21 @@ import {
   Color,
   CylinderGeometry,
   DoubleSide,
-  Euler,
-  ExtrudeGeometry,
   Group,
   LatheGeometry,
-  Matrix4,
   Mesh,
   MeshStandardMaterial,
   OctahedronGeometry,
-  Quaternion,
   Shape,
   ShapeGeometry,
-  SphereGeometry,
   TorusGeometry,
   Vector2,
-  Vector3,
   type Object3D,
 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { ACCESSORY_LOOKS, ACCESSORY_MOTION, DEFAULT_FIT, type AccessoryFit } from '../config';
+import { ACCESSORY_LOOKS, ACCESSORY_MOTION, DEFAULT_FIT, PARTS, type AccessoryFit } from '../config';
+import { ball, COARSE, FULL_TURN, Parts, SMOOTH, starGeometry, type Vec3 } from './parts';
 
 /**
  * Accessories built in code. Each is drawn around its attach point with y up,
@@ -32,75 +27,6 @@ import { ACCESSORY_LOOKS, ACCESSORY_MOTION, DEFAULT_FIT, type AccessoryFit } fro
  * Parts are merged per accessory (colour is stored per vertex), so an accessory
  * costs one draw call, plus one per moving part.
  */
-
-type Vec3 = readonly [number, number, number];
-const FULL_TURN = Math.PI * 2;
-const SMOOTH = 16;
-const COARSE = 8;
-
-interface Placement {
-  at?: Vec3;
-  turn?: Vec3;
-  scale?: Vec3 | number;
-}
-
-/** Collects coloured parts and merges them into one mesh. */
-class Parts {
-  private readonly geometries: BufferGeometry[] = [];
-  private readonly matrix = new Matrix4();
-  private readonly position = new Vector3();
-  private readonly rotation = new Quaternion();
-  private readonly euler = new Euler();
-  private readonly size = new Vector3();
-  private readonly tint = new Color();
-
-  add(geometry: BufferGeometry, color: string, { at = [0, 0, 0], turn = [0, 0, 0], scale = 1 }: Placement = {}): this {
-    const part = geometry.index ? geometry.toNonIndexed() : geometry;
-    this.position.set(at[0], at[1], at[2]);
-    this.rotation.setFromEuler(this.euler.set(turn[0], turn[1], turn[2]));
-    if (typeof scale === 'number') this.size.setScalar(scale);
-    else this.size.set(scale[0], scale[1], scale[2]);
-    part.applyMatrix4(this.matrix.compose(this.position, this.rotation, this.size));
-    this.tint.set(color);
-    const count = part.getAttribute('position').count;
-    const colors = new Float32Array(count * 3);
-    for (let i = 0; i < count; i++) this.tint.toArray(colors, i * 3);
-    part.setAttribute('color', new BufferAttribute(colors, 3));
-    part.deleteAttribute('uv');
-    this.geometries.push(part);
-    return this;
-  }
-
-  /** One mesh for all parts added so far. `glow` makes it shine softly in that colour. */
-  mesh({ glow, glowStrength = 0, sheet = false }: { glow?: string; glowStrength?: number; sheet?: boolean } = {}): Mesh {
-    const geometry = mergeGeometries(this.geometries) ?? new BufferGeometry();
-    geometry.computeVertexNormals();
-    const material = new MeshStandardMaterial({ vertexColors: true, roughness: ACCESSORY_MOTION.ROUGHNESS });
-    if (sheet) material.side = DoubleSide; // capes and wings are thin sheets seen from both sides
-    if (glow) {
-      material.emissive.set(glow);
-      material.emissiveIntensity = glowStrength;
-    }
-    return new Mesh(geometry, material);
-  }
-}
-
-const ball = (radius: number, detail = SMOOTH) => new SphereGeometry(radius, detail, Math.ceil(detail * 0.75));
-
-/** A flat star with `points` points, extruded to `depth`, centred on its origin and facing along z. */
-function starGeometry(outer: number, inner: number, depth: number, points = 5): BufferGeometry {
-  const shape = new Shape();
-  for (let i = 0; i < points * 2; i++) {
-    const radius = i % 2 === 0 ? outer : inner;
-    const angle = (i / (points * 2)) * FULL_TURN + Math.PI / 2;
-    const x = Math.cos(angle) * radius;
-    const y = Math.sin(angle) * radius;
-    if (i === 0) shape.moveTo(x, y);
-    else shape.lineTo(x, y);
-  }
-  shape.closePath();
-  return new ExtrudeGeometry(shape, { depth, bevelEnabled: false }).translate(0, 0, -depth / 2);
-}
 
 /** A four-pointed twinkle about 1 unit across: a tall thin diamond crossed with a wide one. */
 export function twinkleGeometry(): BufferGeometry {
@@ -335,7 +261,7 @@ function cape(group: Group, fit: AccessoryFit): void {
   sheet.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
   sheet.setAttribute('color', new BufferAttribute(new Float32Array(colors), 3));
   sheet.computeVertexNormals();
-  const material = new MeshStandardMaterial({ vertexColors: true, roughness: ACCESSORY_MOTION.ROUGHNESS, side: DoubleSide });
+  const material = new MeshStandardMaterial({ vertexColors: true, roughness: PARTS.ROUGHNESS, side: DoubleSide });
   const pivot = new Group();
   const rise = 0.1 * fit.body + 0.04;
   pivot.position.set(0, rise, 0);

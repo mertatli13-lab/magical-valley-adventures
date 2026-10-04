@@ -327,28 +327,13 @@ export const RENDER = {
   /** If the frame rate drops, the pixel ratio steps down by this much (and back up when it recovers). */
   DPR_STEP: 0.25,
   SKY_COLOR: '#bfe3ff',
-  GROUND_COLOR: '#f7d6e6',
-  /** Grey-box lane stripes: width of each stripe inside its 2 m lane. */
-  LANE_STRIPE_WIDTH: 1.7,
-  LANE_STRIPE_COLOR: '#fbe9f1',
-  /** Cross bands on each chunk so the scrolling is easy to see. */
-  BANDS_PER_CHUNK: 4,
-  BAND_DEPTH: 0.5,
-  BAND_COLOR: '#efc3d8',
-  /** Small heights that stop stripes and bands flickering against the ground. */
-  STRIPE_LIFT: 0.01,
-  BAND_LIFT: 0.02,
   /** Grey-box player capsule. */
   PLAYER_COLOR: '#9b8cff',
   PLAYER_CAP_SEGMENTS: 8,
   PLAYER_RADIAL_SEGMENTS: 16,
   /** The player blinks this many times per second while safe after a hit. */
   BLINK_HZ: 8,
-  /** Grey-box barriers. */
-  LOW_COLOR: '#ff9ec7',
-  HIGH_COLOR: '#8fd3ff',
-  TALL_COLOR: '#b48cff',
-  /** Thickness of the grey-box high bar above its 0.9 m clearance. */
+  /** How thick a high barrier counts as above its 0.9 m clearance, so stars are never placed inside it. */
   HIGH_BAR_THICKNESS: 0.5,
   /** Grey-box star: a flat five-point star, extruded. */
   STAR_RADIUS: 0.3,
@@ -373,7 +358,7 @@ export const RENDER = {
   /** Day fog matches the sky dome's horizon. */
   FOG_COLOR: '#ffe6f2',
   AMBIENT_INTENSITY: 1.1,
-  SUN_INTENSITY: 1.2,
+  SUN_INTENSITY: 1.4,
   SUN_POSITION: [5, 10, 5],
   /** Rotation that lays a plane flat on the ground. */
   FLAT_ROTATION_X: -Math.PI / 2,
@@ -465,6 +450,40 @@ export const CHARACTER_POSES = {
 } as const;
 
 /**
+ * Barriers built in code (used until a modelled GLB exists for a barrier).
+ * Colours only; the shapes are in src/scene/barrierShapes.ts and are sized from
+ * OBSTACLES, so they always match the hitboxes.
+ */
+export const BARRIER_LOOKS = {
+  /** Sweet-wrapper colours for the candy pile, macarons and sprinkles. */
+  SWEETS: ['#ff8fbc', '#ffe066', '#8fd3ff', '#b9a4ff', '#8fe3b0', '#ffab7a'],
+  CREAM: '#fff6e6',
+  WHITE: '#ffffff',
+  CHERRY: '#ff5f86',
+  WRAPPER: ['#ffd27a', '#fff0c2'],
+  FROSTING: ['#ff9cc4', '#ffc4dd'],
+  LOG: ['#ff8fbc', '#ffffff'],
+  CLOUD: ['#ffc4dd', '#ffe1ee', '#ffffff'],
+  DONUT: '#f2c58c',
+  DONUT_ICING: '#ff9cc4',
+  POLE: ['#ff6f91', '#ffffff'],
+  BANNER: '#ffb3d9',
+  BANNER_TRIM: '#fff07a',
+  CAKE: ['#ff9cc4', '#fff6e6', '#c9a7ff'],
+  JELLY: ['#8fe3b0', '#ffe066', '#ff9cc4'],
+  PLATE: '#fff6e6',
+} as const;
+
+/** Objects built in code from simple parts (accessories, barriers, scenery). Cosmetic only. */
+export const PARTS = {
+  /** Segments around round parts: close-up shapes, and small or distant ones. */
+  SMOOTH: 16,
+  COARSE: 8,
+  /** A soft, matt surface. */
+  ROUGHNESS: 0.85,
+} as const;
+
+/**
  * Accessories built in code (used until a modelled GLB exists for an item).
  * Colours per item; the shapes are in src/scene/accessoryShapes.ts.
  */
@@ -504,8 +523,6 @@ export const ACCESSORY_MOTION = {
   SPARKLE_RATE: 1.5,
   SPARKLE_SHRINK: 0.5,
   SPARKLE_GLOW: 0.9,
-  /** Soft plush surface for every accessory. */
-  ROUGHNESS: 0.85,
 } as const;
 
 /** Named points on each character where accessories attach (Blender asset spec: empties with these names). */
@@ -600,7 +617,8 @@ export const LIGHTING = {
   /** Bright pastel daylight: a hemisphere light plus one soft directional light. */
   HEMI_SKY_COLOR: '#fff6fb',
   HEMI_GROUND_COLOR: '#d9c4ff',
-  HEMI_DAY_INTENSITY: 1.6,
+  /** With the sun, this lights an upward-facing surface at exactly its own colour. */
+  HEMI_DAY_INTENSITY: 2,
   HEMI_NIGHT_INTENSITY: 0.45,
   SUN_COLOR: '#fff1d6',
 } as const;
@@ -616,39 +634,147 @@ export const BLOB_SHADOW = {
 
 export const VALLEY = {
   /** Side scenery per 40 m ground chunk, recycled with the chunk. */
-  SCENERY_PER_CHUNK: 10,
+  SCENERY_PER_CHUNK: 22,
   /** Scenery stays at least 5 m from the centre line (asset spec). */
-  SCENERY_MIN_X: 5.5,
-  SCENERY_MAX_X: 13,
+  SCENERY_MIN_X: 5.9,
+  SCENERY_MAX_X: 14,
   /** Landscape screens see further to the sides: a second band of scenery out there. */
-  FAR_SCENERY_PER_CHUNK: 8,
+  FAR_SCENERY_PER_CHUNK: 12,
   FAR_SCENERY_MIN_X: 15,
-  FAR_SCENERY_MAX_X: 32,
+  FAR_SCENERY_MAX_X: 36,
   SCENERY_MIN_SCALE: 0.8,
   SCENERY_MAX_SCALE: 1.3,
+  /**
+   * Scenery built in code. `weight`: how often it is chosen; `near` / `far`: which
+   * band it may stand in; `minX`: tall things keep further from the path; `sway`:
+   * how far it leans in the breeze (radians); `bob`: how far it floats up and down (m).
+   */
+  SCENERY: {
+    'bubble-tree': { weight: 4, near: true, far: true, minX: 7.5, sway: 0.025, bob: 0 },
+    'blossom-tree': { weight: 4, near: true, far: true, minX: 7.5, sway: 0.025, bob: 0 },
+    'mint-tree': { weight: 3, near: true, far: true, minX: 7.5, sway: 0.02, bob: 0 },
+    lollipop: { weight: 3, near: true, far: true, minX: 6.5, sway: 0.03, bob: 0 },
+    'swirl-pop': { weight: 2, near: true, far: true, minX: 6.5, sway: 0.03, bob: 0 },
+    'candy-cane': { weight: 3, near: true, far: false, minX: 6.2, sway: 0, bob: 0 },
+    'spotty-mushroom': { weight: 4, near: true, far: false, minX: 0, sway: 0, bob: 0 },
+    'mushroom-pair': { weight: 3, near: true, far: false, minX: 0, sway: 0, bob: 0 },
+    tulips: { weight: 6, near: true, far: false, minX: 0, sway: 0.06, bob: 0 },
+    daisies: { weight: 6, near: true, far: false, minX: 0, sway: 0.06, bob: 0 },
+    'berry-bush': { weight: 4, near: true, far: true, minX: 0, sway: 0, bob: 0 },
+    rocks: { weight: 2, near: true, far: true, minX: 0, sway: 0, bob: 0 },
+    cottage: { weight: 2, near: false, far: true, minX: 0, sway: 0, bob: 0 },
+    balloons: { weight: 1.5, near: true, far: true, minX: 8, sway: 0.08, bob: 0.25 },
+  },
+  /** Sways and bobs per second. */
+  SWAY_RATE: 0.35,
+  /** Candy lamp posts beside the path, this many on each side per chunk, alternating sides. */
+  LAMP_POSTS_PER_CHUNK: 2,
+  LAMP_POST_X: 5.55,
+  /** Shared scenery colours. */
+  COLORS: {
+    TRUNK: '#c9a27e',
+    LILAC: ['#c9a7ff', '#dcc6ff', '#b592f5'],
+    PINK: ['#ffb3d1', '#ffd0e2', '#ff93bd'],
+    MINT: ['#9fe7c8', '#c1f2dc', '#7fd9b4'],
+    LEAF: ['#8fdc86', '#a9e89c'],
+    STEM: '#fff3e0',
+    CREAM: '#fff6e6',
+    WHITE: '#ffffff',
+    RED: '#ff6f91',
+    YELLOW: '#ffe066',
+    BLUE: '#8fd3ff',
+    ROCK: ['#e6ddf2', '#d5c9ea'],
+    GLOW: '#fff3b0',
+  },
   /** Grass on each side of the path, beyond the 10 m ground chunk. */
   GRASS_WIDTH: 40,
-  GRASS_COLOR: '#c8f0d0',
-  /** Placeholder scenery: pastel trees, mushrooms and flowers. */
-  TREE_TRUNK: [0.15, 1.2],
-  TREE_CROWN: 0.9,
-  MUSHROOM_STEM: [0.15, 0.5],
-  MUSHROOM_CAP: 0.4,
-  FLOWER_SIZE: 0.18,
-  TRUNK_COLOR: '#c9a27e',
-  STEM_COLOR: '#fff3e0',
-  CROWN_COLORS: ['#d7b8ff', '#b8f0d8', '#ffc9e3'],
-  CAP_COLORS: ['#ff9ec7', '#ffd27a', '#b8a6ff'],
-  FLOWER_COLORS: ['#ff8fc7', '#fff07a', '#9fe7ff', '#ffffff'],
-  SEGMENTS: 10,
+  /**
+   * The candy path, drawn once as a square tile that repeats along the chunk.
+   * Lengths are in metres; the tile is one chunk-width square.
+   */
+  PATH: {
+    TILE_PIXELS: 512,
+    /** The three lanes: paving stones in a few close pinks, with icing dashes between lanes. */
+    STONE_COLORS: ['#fff3f8', '#ffe9f2', '#fff7ee', '#fdeafb'],
+    GROUT_COLOR: '#ffb9d8',
+    STONE_LENGTH: 1.25,
+    STONE_GAP: 0.07,
+    STONE_ROUND: 0.16,
+    DASH_COLOR: '#c9a7ff',
+    DASH_WIDTH: 0.1,
+    DASH_LENGTH: 1.1,
+    DASH_PERIOD: 2.5,
+    /** Candy-stripe band along each side of the lanes. */
+    EDGE_COLORS: ['#ff8fbc', '#ffffff'],
+    EDGE_WIDTH: 0.28,
+    EDGE_STRIPE: 0.5,
+    /** Biscuit shoulders between the lanes and the grass, scattered with sprinkles. */
+    SHOULDER_COLOR: '#ffefd2',
+    SHOULDER_SPECK_COLOR: '#f9dcae',
+    SPRINKLE_COLORS: ['#ff8fbc', '#8fd3ff', '#fff07a', '#b9a4ff', '#8fe39a'],
+    SPRINKLES: 70,
+    SPECKS: 260,
+  },
+  /** Raised kerb blocks along both edges of the path, in alternating colours. */
+  KERB: { WIDTH: 0.3, HEIGHT: 0.16, LENGTH: 1, COLORS: ['#ff9cc4', '#fff6fb'] },
+  /** The meadow, drawn once as a square tile GRASS_TILE metres across that repeats. */
+  GRASS: {
+    TILE_PIXELS: 512,
+    TILE: 10,
+    COLOR: '#a8ea9a',
+    PATCH_COLORS: ['#98e28c', '#b9f0a6', '#a0e6a8'],
+    PATCHES: 46,
+    TUFT_COLOR: '#7fd47c',
+    TUFTS: 320,
+    DOT_COLORS: ['#ffffff', '#ff9ec7', '#fff07a', '#c9a7ff'],
+    DOTS: 110,
+  },
+  /** Texture sharpness at grazing angles (capped by the device). */
+  ANISOTROPY: 8,
   /** Sky dome: gradient sphere around the camera when there is no sky model. */
   SKY_RADIUS: 170,
-  SKY_TOP_COLOR: '#8fd0ff',
-  SKY_HORIZON_COLOR: '#ffe6f2',
+  SKY_TOP_COLOR: '#69bfff',
+  SKY_HORIZON_COLOR: '#ffe9f3',
+  /**
+   * Backdrop around the sky dome: it follows the camera, so it never gets closer.
+   * Angles are in degrees: `turn` is measured from straight ahead (negative = left), `up` from the horizon.
+   */
+  BACKDROP_RADIUS: 150,
+  /** Rolling hills, far ridge first. `height` and `roll` in metres; each fades into the horizon at its foot. */
+  HILLS: [
+    { color: '#c3bfff', height: 13, roll: 5, seed: 1 },
+    { color: '#a9e2cf', height: 8, roll: 3.5, seed: 2 },
+    { color: '#9fe2a0', height: 4, roll: 2, seed: 3 },
+  ],
+  HILL_FOOT: -10,
+  HILL_SEGMENTS: 120,
+  /** Puffy clouds: white on top, pink underneath, drifting slowly round the sky. */
+  CLOUD_COUNT: 18,
+  CLOUD_TOP_COLOR: '#ffffff',
+  CLOUD_UNDER_COLOR: '#ffd3e8',
+  CLOUD_MIN_UP: 6,
+  CLOUD_MAX_UP: 26,
+  CLOUD_MIN_SIZE: 9,
+  CLOUD_MAX_SIZE: 20,
+  /** Degrees per second. */
+  CLOUD_DRIFT: 0.25,
+  SUN: { turn: -24, up: 14, size: 7, glow: 17, glowOpacity: 0.45, color: '#fff8cf', glowColor: '#ffe9a8' },
+  RAINBOW: {
+    turn: 14,
+    radius: 46,
+    width: 9,
+    /** How far its centre sits below the horizon (m). */
+    sink: 6,
+    opacity: 0.55,
+    colors: ['#ff8a9a', '#ffb27a', '#fff07a', '#8fe39a', '#7ecbff', '#a99bff', '#e39bff'],
+  },
   /** Butterflies and sparkles drifting over the valley, scrolling with the world. */
   BUTTERFLY_COUNT: 40,
-  BUTTERFLY_SIZE: 0.35,
-  BUTTERFLY_COLORS: ['#ff8fc7', '#c9a7ff', '#ffd27a'],
+  BUTTERFLY_SIZE: 0.3,
+  /** Wing beats per second, and how far the wings open and close (radians). */
+  BUTTERFLY_FLAP_RATE: 5,
+  BUTTERFLY_FLAP: 1.1,
+  BUTTERFLY_COLORS: ['#ff7eb6', '#b48cff', '#ffc94d', '#6ec6ff', '#ffffff'],
   SPARKLE_COUNT: 120,
   SPARKLE_SIZE: 0.12,
   SPARKLE_COLOR: '#ffffff',

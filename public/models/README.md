@@ -1,8 +1,16 @@
 # Models
 
 The game loads these GLB files at startup, behind the loading bar on the
-Landing screen. Any file that is missing is replaced by a grey-box or pastel
-placeholder, with a warning in the browser console, so the game always runs.
+Landing screen. Any file that is missing is replaced by a version built in
+code, with a warning in the browser console, so the game always runs:
+
+- Characters: a capsule in the character's colour.
+- Barriers, accessories, scenery, ground and sky: finished shapes drawn in
+  code (`barrierShapes.ts`, `accessoryShapes.ts`, `sceneryShapes.ts`,
+  `Ground.tsx` and `backdrop.ts` in `src/scene/`). A GLB placed here replaces
+  the built version of that item.
+- Accessories on a model without `acc_*` empties attach to its head-end, neck
+  and spine joints, at the offsets in `MODEL_FITS` in `src/config.ts`.
 Export settings and budgets are in docs/design.md, "Blender asset spec".
 
 | File | Notes |
