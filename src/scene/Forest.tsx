@@ -120,7 +120,7 @@ function StageCharacters() {
       {CHARACTERS.map((character, i) => (
         <group key={character.id} ref={(group) => void (groups.current[i] = group)}>
           {models[i] ? (
-            <CharacterModel gltf={models[i]} name={character.id} frame={() => frames[i] as CharacterFrame} />
+            <CharacterModel gltf={models[i]} name={character.id} frame={() => frames[i] as CharacterFrame} facesCamera />
           ) : (
             <mesh ref={(mesh) => void (meshes.current[i] = mesh)} position-y={PLAYER.STAND_HEIGHT / 2}>
               <capsuleGeometry args={[RADIUS, BODY_LENGTH, RENDER.PLAYER_CAP_SEGMENTS, RENDER.PLAYER_RADIAL_SEGMENTS]} />
