@@ -454,7 +454,7 @@ Acceptance:
 ```
 Implement section A1 (state machine), A7 (revive and economy) and the save format in A8 of docs/design.md, with every screen in the Screens and flow table except the Shop.
 
-- Landing: layered image from public/ui/landing/ (sky, clouds, five characters as separate PNGs). Characters bob, clouds drift, PLAY pulses. Star total shown in a corner.
+- Landing: layered image from public/ui/landing/ (sky, clouds, five characters as separate WebP images). Characters bob, clouds drift, PLAY pulses. Star total shown in a corner.
 - Transition: camera moves down from the sky into the night forest in 0.8 s.
 - Character select: 3D round stage with a centre podium. Swipe or arrow keys rotate one character per step. Use coloured capsules as placeholders. Locked characters are dark silhouettes with a price tag. CHOOSE starts the run with an owned character.
 - Pause: Resume, Restart, Home. The game also pauses automatically when the browser tab is hidden.

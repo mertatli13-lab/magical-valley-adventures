@@ -9,11 +9,42 @@ import { usePresence } from '../usePresence';
 const ART = `${import.meta.env.BASE_URL}ui/landing/`;
 const TRANSITION_MS = SCREENS.TRANSITION_TIME * 1000;
 
-/** An artwork layer that falls back to a drawn placeholder until the PNG exists. */
+/** An artwork layer that falls back to a drawn placeholder until the image exists. */
 function Layer({ src, alt, className, fallback }: { src: string; alt: string; className: string; fallback: ReactNode }) {
   const [failed, setFailed] = useState(false);
   if (failed) return <>{fallback}</>;
   return <img className={className} src={src} alt={alt} draggable={false} onError={() => setFailed(true)} />;
+}
+
+/**
+ * The cloud tile repeats seamlessly, so three copies side by side scroll left
+ * by one copy per loop and always cover the screen. Falls back to drawn clouds.
+ */
+function CloudStrip() {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <div className="landing-clouds-fallback">
+        <span />
+        <span />
+        <span />
+      </div>
+    );
+  }
+  return (
+    <div className="landing-clouds-track">
+      {[0, 1, 2].map((i) => (
+        <img
+          key={i}
+          className="landing-clouds-image"
+          src={`${ART}clouds.webp`}
+          alt=""
+          draggable={false}
+          onError={() => setFailed(true)}
+        />
+      ))}
+    </div>
+  );
 }
 
 /**
@@ -31,28 +62,17 @@ export function Landing() {
   return (
     <div className={`landing${leaving ? ' leaving' : ''}`} aria-hidden={leaving}>
       <picture className="landing-sky">
-        <source media="(orientation: portrait)" srcSet={`${ART}sky-9x16.png`} />
-        <Layer src={`${ART}sky-16x9.png`} alt="" className="landing-sky-image" fallback={null} />
+        <source media="(orientation: portrait)" srcSet={`${ART}sky-9x16.webp`} />
+        <Layer src={`${ART}sky-16x9.webp`} alt="" className="landing-sky-image" fallback={null} />
       </picture>
       <div className="landing-clouds">
-        <Layer
-          src={`${ART}clouds.png`}
-          alt=""
-          className="landing-clouds-image"
-          fallback={
-            <div className="landing-clouds-fallback">
-              <span />
-              <span />
-              <span />
-            </div>
-          }
-        />
+        <CloudStrip />
       </div>
       <div className="landing-characters">
         {CHARACTERS.map((character, i) => (
           <div key={character.id} className={`landing-character slot-${i}`}>
             <Layer
-              src={`${ART}${character.id}.png`}
+              src={`${ART}${character.id}.webp`}
               alt={character.name}
               className="landing-character-image"
               fallback={<div className={`landing-character-fallback ${character.id}`}>{character.name}</div>}

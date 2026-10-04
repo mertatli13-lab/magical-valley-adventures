@@ -310,16 +310,28 @@ button {
 .landing-clouds {
   position: absolute;
   inset: 0;
-  animation: drift 60s linear infinite;
+  overflow: hidden;
+}
+
+.landing-clouds-track {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  animation: cloud-drift 60s linear infinite;
 }
 
 .landing-clouds-image {
+  flex: none;
+  height: 100%;
+  width: auto;
+}
+
+.landing-clouds-fallback {
   position: absolute;
   inset: 0;
-  width: 200%;
-  height: 100%;
-  object-fit: cover;
-  object-position: left;
+  animation: drift 60s linear infinite;
 }
 
 .landing-clouds-fallback span {
@@ -346,6 +358,15 @@ button {
   top: 70%;
   left: 30%;
   transform: scale(1.2);
+}
+
+@keyframes cloud-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-33.3333%);
+  }
 }
 
 @keyframes drift {
