@@ -401,6 +401,8 @@ export const STAGE = {
   PODIUM_HEIGHT: 0.5,
   /** Characters stand on a ring this far from the centre. */
   RING_RADIUS: 2.2,
+  /** Characters stand this much larger on the stage than in the run, so they fill it as in the reference art. */
+  CHARACTER_SCALE: 1.45,
   /** How high the focused character hops onto the podium. */
   HOP_HEIGHT: 0.8,
   /** How fast the stage turns and the focus moves, per second. */

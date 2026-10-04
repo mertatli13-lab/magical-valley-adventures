@@ -37,7 +37,8 @@ const BODY_LENGTH = PLAYER.STAND_HEIGHT - 2 * RADIUS;
 const STEP_ANGLE = (Math.PI * 2) / CHARACTERS.length;
 const STAGE_TOP = STAGE.HEIGHT;
 const PODIUM_TOP = STAGE.HEIGHT + STAGE.PODIUM_HEIGHT;
-const TAG_HEIGHT = PLAYER.STAND_HEIGHT + STAGE.TAG_OFFSET;
+const TAG_HEIGHT = PLAYER.STAND_HEIGHT * STAGE.CHARACTER_SCALE + STAGE.TAG_OFFSET;
+const [CAMERA_X, , CAMERA_Z] = SCREENS.SELECT_CAMERA_POSITION;
 const BACKDROP_URL = `${import.meta.env.BASE_URL}ui/select/`;
 
 /** The stage's current turn, written by the characters and read by the stage top so its grooves turn with them. */
@@ -199,6 +200,8 @@ function StageCharacters() {
       const ringZ = Math.cos(theta) * STAGE.RING_RADIUS;
       const y = STAGE_TOP + (PODIUM_TOP - STAGE_TOP) * w + Math.sin(Math.PI * w) * STAGE.HOP_HEIGHT;
       group.position.set(ringX * (1 - w), y, ringZ * (1 - w));
+      // Everyone on the ring turns to face the select camera.
+      group.rotation.y = Math.atan2(CAMERA_X - group.position.x, CAMERA_Z - group.position.z);
       const owned = s.owns(character);
       if (mesh) mesh.material = owned ? (materials.colors[i] ?? materials.locked) : materials.locked;
       const state = frames[i];
@@ -218,7 +221,7 @@ function StageCharacters() {
   return (
     <>
       {CHARACTERS.map((character, i) => (
-        <group key={character.id} ref={(group) => void (groups.current[i] = group)}>
+        <group key={character.id} ref={(group) => void (groups.current[i] = group)} scale={STAGE.CHARACTER_SCALE}>
           {models[i] ? (
             <CharacterModel gltf={models[i]} name={character.id} frame={() => frames[i] as CharacterFrame} facesCamera />
           ) : (
