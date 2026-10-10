@@ -615,6 +615,11 @@ export const MODEL_FITS: Readonly<Record<string, { fit: AccessoryFit; points: Re
     fit: { head: 0.2, neck: 0.12, eyes: 0.15, face: 0.2, shoulders: 0.17, body: 0.55 },
     points: { acc_head: [0, 0.08, 0], acc_neck: [0, 0.04, -0.04], acc_back: [0, 0, 0] },
   },
+  /** Sugar also has acc_* empties; a slimmer head than Ginza's. */
+  sugar: {
+    fit: { head: 0.17, neck: 0.1, eyes: 0.14, face: 0.17, shoulders: 0.16, body: 0.52 },
+    points: { acc_head: [0, 0.08, 0], acc_neck: [0, 0.04, -0.04], acc_back: [0, 0, 0] },
+  },
 };
 
 /** Where each attach point sits on the capsule, as a share of the hero's current height. */

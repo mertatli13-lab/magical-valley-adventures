@@ -38,4 +38,11 @@ it, adds the `acc_*` empties and keys all eight clips at 30 fps. It checks the
 spec's limits: the slide stays under 0.6 m and the tumble under the 0.9 m gap
 below high barriers. Add `--previews <dir>` for rendered key frames.
 A new four-legged character needs its own `SKELETONS` entry (joint positions
-in metres, measured from a side and a front render).
+in metres, measured from a side and a front render). An entry can also give a
+rigid `horn` bone (Sugar's, so her horn doesn't follow the ear beside it), a
+mane chain of any length, its `signature` (`tumble` for Ginza, `skid` for
+Sugar's rainbow dash) and `tune`, small changes to the shared poses.
+
+```sh
+.blender/bin/python -I scripts/rig-quadruped.py -- art/meshy/sugar.glb art/models/characters/sugar.glb --character sugar
+```

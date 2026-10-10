@@ -14,7 +14,7 @@ The script:
 - adds the acc_head, acc_neck and acc_back attach empties;
 - keys the eight clips from the asset spec at 30 fps: Idle, Run (a gallop),
   Jump, Slide (body under 0.6 m), Hit, Out, Celebrate and Signature (Ginza's
-  clumsy tumble: he trips and rolls through as a ball);
+  clumsy tumble, rolling through as a ball, or Sugar's rainbow dash, a low skid);
 - exports a GLB for npm run optimize:models, and optionally preview renders.
 """
 import functools
@@ -103,12 +103,40 @@ SKELETONS = {
         'neck': ((-0.13, 0.55), (-0.19, 0.76)), 'muzzle': (-0.45, 0.72),
         'ears': {'L': ((0.13, -0.16, 0.96), (0.15, -0.15, 1.10)), 'R': ((-0.10, -0.16, 0.96), (-0.11, -0.15, 1.10))},
         'mane': ((0.02, -0.20, 0.98), (0.02, -0.22, 1.13)),
+        'signature': 'tumble',
         'tail': ((0.0, 0.28, 0.58), (0.0, 0.39, 0.53), (0.0, 0.46, 0.43)),
         'feet': {'FrontLeg.L': (0.12, -0.15), 'FrontLeg.R': (-0.11, -0.20), 'BackLeg.L': (0.17, 0.19), 'BackLeg.R': (-0.17, 0.24)},
         'leg_top': 0.42, 'knee': 0.2,
         'head_top': 1.0, 'head_half_width': 0.2,
     },
+    # Sugar's head is turned a little toward her left, so the neck, head, ears and
+    # horn sit to the +X side; her long mane hangs down her right side.
+    'sugar': {
+        'belly': 0.30, 'back': 0.54, 'torso': (0.0, 0.42), 'chest': (-0.26, 0.42), 'rump': (0.26, 0.44),
+        'neck': ((0.0, -0.15, 0.50), (0.04, -0.17, 0.72)), 'muzzle': (0.15, -0.37, 0.66),
+        'ears': {'L': ((0.13, -0.12, 0.93), (0.13, -0.11, 1.06)), 'R': ((-0.03, -0.13, 0.93), (-0.03, -0.12, 1.06))},
+        # The horn gets a bone of its own that is never animated, so it stays rigid on the
+        # head instead of following the ear beside it.
+        'horn': ((0.16, -0.28, 0.94), (0.24, -0.35, 1.13)),
+        'mane': ((-0.02, -0.12, 0.98), (-0.16, -0.10, 0.70), (-0.22, -0.10, 0.38)),
+        'tail': ((0.0, 0.25, 0.51), (0.0, 0.37, 0.45), (0.0, 0.42, 0.26)),
+        'feet': {'FrontLeg.L': (0.175, -0.142), 'FrontLeg.R': (-0.056, -0.221), 'BackLeg.L': (0.087, 0.212), 'BackLeg.R': (-0.171, 0.177)},
+        'leg_top': 0.38, 'knee': 0.19,
+        'head_top': 0.98, 'head_half_width': 0.17, 'head_x': 0.08,
+        'signature': 'skid',
+        # Her horn stands up, so she keeps her head level to stay low in the slide and the skid.
+        'tune': {'slide': {'Head': -0.2}, 'skid': {'Head': 0.3, 'Mane': 0.3, 'Ear.L': -1.4, 'Ear.R': -1.4}},
+    },
 }
+
+
+# Per-character adjustments to the shared poses, set from SKELETONS in main().
+TUNE = {}
+
+
+def p3(point):
+    """A joint as (x, y, z); points given as (y, z) sit on the middle line."""
+    return tuple(point) if len(point) == 3 else (0.0, *point)
 
 
 def build_armature(S):
@@ -137,12 +165,18 @@ def build_armature(S):
     bone('Body', (0, ty, tz), (0, ty, tz + 0.1), 'Root', deform=False)
     bone('Hips', (0, ty, tz), (0, *S['rump']), 'Body')
     bone('Chest', (0, ty, tz), (0, *S['chest']), 'Body')
-    (ny, nz), (hy, hz) = S['neck']
-    bone('Neck', (0, ny, nz), (0, hy, hz), 'Chest')
-    bone('Head', (0, hy, hz), (0, *S['muzzle']), 'Neck')
+    neck_base, head_base = (p3(q) for q in S['neck'])
+    bone('Neck', neck_base, head_base, 'Chest')
+    bone('Head', head_base, p3(S['muzzle']), 'Neck')
     for side, (base, tip) in S['ears'].items():
         bone('Ear.' + side, base, tip, 'Head')
-    bone('Mane', *S['mane'], 'Head')
+    if 'horn' in S:
+        bone('Horn', *S['horn'], 'Head')
+    # The mane is a chain: Mane, Mane2, ... from the top of the head.
+    mane = S['mane']
+    for i in range(len(mane) - 1):
+        name = 'Mane' if i == 0 else f'Mane{i + 1}'
+        bone(name, mane[i], mane[i + 1], 'Head' if i == 0 else ('Mane' if i == 1 else f'Mane{i}'))
     t0, t1, t2 = S['tail']
     bone('Tail1', t0, t1, 'Hips')
     bone('Tail2', t1, t2, 'Tail1')
@@ -186,11 +220,11 @@ def skin(mesh, rig, softness=0.04, influences=4):
 
 def attach_points(rig, S):
     """acc_head on top of the head, acc_neck at the collar, acc_back on the back (asset spec)."""
-    (ny, nz), _ = S['neck']
-    hy = (S['neck'][1][0] + S['muzzle'][0]) / 2
+    nx, ny, nz = p3(S['neck'][0])
+    hy = (p3(S['neck'][1])[1] + p3(S['muzzle'])[1]) / 2
     points = {
-        'acc_head': ('Head', (0, hy + 0.08, S['head_top'])),
-        'acc_neck': ('Neck', (0, ny - 0.02, nz + 0.04)),
+        'acc_head': ('Head', (S.get('head_x', 0), hy + 0.08, S['head_top'])),
+        'acc_neck': ('Neck', (nx, ny - 0.02, nz + 0.04)),
         'acc_back': ('Hips', (0, S['torso'][0] + 0.04, S['back'])),
     }
     for name, (bone, at) in points.items():
@@ -232,6 +266,10 @@ def apply_pose(rig, pose):
         pb.rotation_euler = (0, 0, 0)
         pb.location = (0, 0, 0)
         pb.scale = (1, 1, 1)
+    bones = rig.data.bones
+    # Poses give the mane's pitch for a tuft that stands up (negative streams it back);
+    # a mane that hangs down turns the other way.
+    mane_sign = 1 if bones['Mane'].tail_local.z > bones['Mane'].head_local.z else -1
     for key, value in pose.items():
         if key in ('lift', 'shift', 'squash'):
             continue
@@ -239,7 +277,13 @@ def apply_pose(rig, pose):
         if name not in rig.pose.bones:
             continue
         index = 'xyz'.index(axis or 'x')
+        if name == 'Mane' and index == 0:
+            value *= mane_sign
         rig.pose.bones[name].rotation_euler[index] += value
+        # Further mane bones follow through with a little less of the same motion.
+        if name == 'Mane':
+            for i, follow in enumerate(b for b in ('Mane2', 'Mane3') if b in rig.pose.bones):
+                rig.pose.bones[follow].rotation_euler[index] += value * 0.6 ** (i + 1)
     # Body points up: its local Y is world Z and its local Z is world -Y.
     body = rig.pose.bones['Body']
     body.location = (0, pose.get('lift', 0), -pose.get('shift', 0))
@@ -346,7 +390,8 @@ def lying(drop):
     return {'lift': -drop, 'Body': 0.0,
             'FrontLeg.L': -1.45, 'FrontLeg.R': -1.4, 'FrontShin.L': 0.1, 'FrontShin.R': 0.15,
             'BackLeg.L': 1.4, 'BackLeg.R': 1.45, 'BackShin.L': 0.1, 'BackShin.R': 0.05,
-            'Neck': 1.5, 'Head': -0.6, 'Ear.L': -1.4, 'Ear.R': -1.4, 'Mane': 0.2, 'Tail1': -0.1, 'Tail2': 0.25}
+            'Neck': 1.5, 'Head': -0.6, 'Ear.L': -1.4, 'Ear.R': -1.4, 'Mane': 0.2, 'Tail1': -0.1, 'Tail2': 0.25,
+            **TUNE.get('slide', {})}
 
 
 def slide(f, drop):
@@ -405,6 +450,21 @@ def tumble(f, ball_drop, slide_drop):
         pose['Body'] = 0.45 + (TAU - 0.45) * (f - 4) / 13  # one full forward roll
         return pose
     return keyed([(17, {**ball, 'Body': TAU}), (21, {**lying(slide_drop), 'Body': TAU})], f)
+
+
+def skid(f, drop):
+    """Rainbow dash: drops low and skids, front legs braced forward, hind legs tucked under,
+    leaning back with the hips swinging out a little; the game draws the rainbow trail."""
+    low = {'lift': -drop * 0.75, 'Body': -0.2, 'Body:y': 0.2,
+           'FrontLeg.L': -1.05, 'FrontLeg.R': -0.95, 'FrontShin.L': -0.1, 'FrontShin.R': 0.0,
+           'BackLeg.L': -1.0, 'BackLeg.R': -1.05, 'BackShin.L': 1.7, 'BackShin.R': 1.75,
+           'Neck': 1.2, 'Head': -0.55, 'Head:z': -0.15, 'Ear.L': -1.2, 'Ear.R': -1.2,
+           'Mane': -0.3, 'Tail1': 0.9, 'Tail2': 0.4, **TUNE.get('skid', {})}
+    pose = keyed([(0, {}), (3, low), (21, {**low, 'Body:y': -0.1})], f)
+    wobble = smooth((f - 3) / 3)
+    pose['Body:y'] = pose.get('Body:y', 0) + wobble * 0.08 * math.sin(TAU * f / 7)
+    pose['Tail1:z'] = wobble * 0.35 * math.sin(TAU * f / 9)
+    return pose
 
 
 # ---------------------------------------------------------------- checks and previews
@@ -481,6 +541,7 @@ def main():
     preview_dir = args[args.index('--previews') + 1] if '--previews' in args else None
     character = args[args.index('--character') + 1]
     S = SKELETONS[character]
+    TUNE.update(S.get('tune', {}))
     mesh = load(source)  # resets Blender to factory settings, so the frame rate is set after it
     bpy.context.scene.render.fps = FPS
     straighten(mesh)
@@ -495,6 +556,8 @@ def main():
 
     # Frames whose lowest point is put on the ground after posing.
     grounded = {'Hit': range(16), 'Out': range(46), 'Signature': range(1, 22)}
+    if S['signature'] != 'tumble':
+        ball_drop = 0.0
     clips = {
         'Idle': (60, idle, True),
         'Run': (16, run, True),
@@ -503,7 +566,8 @@ def main():
         'Hit': (15, hit, False),
         'Out': (45, out, False),
         'Celebrate': (60, celebrate, True),
-        'Signature': (21, lambda f: tumble(f, ball_drop, slide_drop), False),
+        'Signature': (21, (lambda f: tumble(f, ball_drop, slide_drop)) if S['signature'] == 'tumble'
+                      else (lambda f: skid(f, slide_drop)), False),
     }
     baked = {}
     for name, (frames, fn, loop) in clips.items():
@@ -524,10 +588,16 @@ def main():
         picks = {name: (a, n, [round(n * k / 4) for k in range(4)]) for name, (a, n) in baked.items()}
         previews(rig, picks, preview_dir)
 
-    bpy.ops.object.select_all(action='SELECT')
+    # Export only the character: the rig, its mesh and the attach empties (not the preview
+    # floor, camera and light).
+    bpy.ops.object.select_all(action='DESELECT')
+    for obj in bpy.context.scene.objects:
+        if obj == rig or obj.parent == rig:
+            obj.select_set(True)
     bpy.ops.export_scene.gltf(
         filepath=target,
         export_format='GLB',
+        use_selection=True,
         export_animations=True,
         export_animation_mode='ACTIONS',
         export_force_sampling=True,
