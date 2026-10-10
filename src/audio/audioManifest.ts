@@ -15,12 +15,16 @@ export const SOUND_FILES = {
 
 export type Sound = keyof typeof SOUND_FILES;
 
-/** One looping track for the menus and one for the run. */
-export const MUSIC_FILES = {
-  menu: 'audio/music-menu.mp3',
-  run: 'audio/music-run.mp3',
-} as const;
+/**
+ * Music for the menus and for the run. Both play Mert's "Sugar Dash", so one song
+ * runs through the whole game without restarting; give a track its own file to
+ * cross-fade between two songs instead.
+ */
+export const MUSIC_FILES: Readonly<Record<'menu' | 'run', string>> = {
+  menu: 'audio/music-sugar-dash.mp3',
+  run: 'audio/music-sugar-dash.mp3',
+};
 
 export type Track = keyof typeof MUSIC_FILES;
 
-export const ALL_AUDIO: readonly string[] = [...Object.values(SOUND_FILES), ...Object.values(MUSIC_FILES)];
+export const ALL_AUDIO: readonly string[] = [...Object.values(SOUND_FILES), ...new Set(Object.values(MUSIC_FILES))];
