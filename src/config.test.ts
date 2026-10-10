@@ -92,10 +92,10 @@ describe('star economy', () => {
     const characters = sum(Object.values(CHARACTER_PRICES));
     const moves = SIGNATURE_MOVE_PRICE * Object.keys(CHARACTER_PRICES).length;
     const accessories = sum(Object.values(ACCESSORY_TIERS).map((t) => t.PRICE * t.COUNT));
-    expect(characters).toBe(6000);
+    expect(characters).toBe(0); // every character is free from the start
     expect(moves).toBe(4000);
     expect(accessories).toBe(3000);
-    expect(characters + moves + accessories).toBe(13000);
+    expect(characters + moves + accessories).toBe(7000);
   });
 });
 

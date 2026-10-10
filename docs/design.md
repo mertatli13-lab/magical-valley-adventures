@@ -22,7 +22,7 @@ Everything below follows from these decisions. Rows marked "proposed" are the te
 | Goal | Collect the most stars in a run | Mert |
 | Stars buy | Revives, new characters, accessories and signature moves | Mert |
 | Lives | Three hearts per run | Mert |
-| Characters | Strawberry, Ginza, Chity, Kusto, plus Sugar the rainbow unicorn as the fifth to unlock | Mert |
+| Characters | Strawberry, Ginza, Chity, Kusto and Sugar the rainbow unicorn, all available from the start (changed from unlocking them with stars, October 2026) | Mert |
 | Character looks | Kusto wears a red beanie; Chity wears jeans and a black T-shirt with no hat or cymbals; Ginza and Sugar run on four legs; Strawberry's eyes stay closed | Mert |
 | Player | Asya, age band 9 to 12, so pacing close to Hero Dash | Mert |
 | Controls | Swipe on touch screens, arrow keys or WASD on a keyboard | Mert |
@@ -42,7 +42,7 @@ The game has seven screens, and a player can go from opening the page to running
 | Screen | What the player sees | Actions | Leads to |
 |---|---|---|---|
 | Landing | Daytime sky, drifting clouds and ribbons, the five plush characters floating around a big PLAY button, star total in a corner | PLAY | Character select |
-| Character select | Night forest with fireflies, a glowing round stage with a raised centre podium, CHOOSE button | Swipe or arrow keys to rotate the stage; CHOOSE; tap a locked character to see its price | Run, or Shop for a locked character |
+| Character select | Night forest with fireflies, a glowing round stage with a raised centre podium, CHOOSE button | Swipe or arrow keys to rotate the stage; CHOOSE | Run |
 | Run | The hero from behind on a three-lane path through Magical Valley; hearts top left, star count top centre, pause top right | Swipe or keys to move; pause | Pause, or Out at zero hearts |
 | Pause | Dimmed run with Resume, Restart and Home | Tap a button | Run, or Landing |
 | Out | The hero sits down dizzy; "Keep going?" with the revive price and a 5-second countdown | Revive, or No thanks | Run, or Results |
@@ -54,7 +54,7 @@ Screen behaviour agreed from the two reference images:
 - **Landing motion:** characters bob gently, clouds drift, the PLAY button pulses. It is layered 2D artwork, so it loads fast.
 - **Sky to forest transition:** tapping PLAY moves the camera down from the sky into the night forest in about 0.8 seconds.
 - **Stage carousel:** the stage rotates one character per swipe. The character in focus hops onto the centre podium and plays its signature pose.
-- **Locked characters:** they stand on the stage as dark silhouettes with a star price tag. The unicorn starts locked.
+- **All characters available:** every character can be chosen from the start. (Locked characters would stand on the stage as dark silhouettes with a star price tag; the code still supports a price, but all are set to 0.)
 - **Run setting:** the run takes place in daylight. When CHOOSE is tapped, the night forest brightens to day as the stage dissolves into the track.
 
 ## Run rules
@@ -140,9 +140,9 @@ The target comes from placing about 180 stars per minute on the track and expect
 |---|---|---|---|---|---|
 | Strawberry | Pink rabbit in a floral dress, eyes closed | Smart, flexible, kind | Two legs | Free | Start |
 | Ginza | Purple pony | Funny, clumsy, friendly | Four legs | Free | Start |
-| Chity | Simple yellow rabbit with a cheeky, menacing face, in jeans and a black T-shirt | A cheeky little menace; Sugar's brother | Two legs | 500 | About 4 minutes |
-| Kusto | Seagull in a red beanie | Courageous | Two legs | 1,500 | About 13 minutes |
-| Sugar | White unicorn with a rainbow mane | Very friendly, loves adventures; Chity's sister, but nothing like him | Four legs | 4,000 | About 33 minutes |
+| Chity | Simple yellow rabbit with a cheeky, menacing face, in jeans and a black T-shirt | A cheeky little menace; Sugar's brother | Two legs | Free | Start |
+| Kusto | Seagull in a red beanie | Courageous | Two legs | Free | Start |
+| Sugar | White unicorn with a rainbow mane | Very friendly, loves adventures; Chity's sister, but nothing like him | Four legs | Free | Start |
 
 All characters run at the same speed with the same hitbox. They differ only in looks, animation and sound, so no character is the "best" one.
 
@@ -170,9 +170,9 @@ Accessories are cosmetic items any character can wear, in three price tiers. The
 
 ### Totals
 
-- Unlocking all characters costs 6,000 stars, about 50 minutes of play.
+- All five characters are free from the start.
 - All signature moves cost 4,000 stars and all accessories cost 3,000 stars.
-- Everything together costs 13,000 stars, about 1 hour 50 minutes of play before any stars are spent on revives.
+- Everything together costs 7,000 stars, about 1 hour of play before any stars are spent on revives.
 - Progress is saved in the browser on the device being used. It does not follow the player to another device in this version.
 
 ## Algorithms
