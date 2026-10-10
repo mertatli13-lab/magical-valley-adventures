@@ -132,6 +132,9 @@ export function CharacterModel({ gltf, name, frame, onClip, facesCamera = false 
     waitingFor: null,
   });
   const clock = useRef(0);
+  // On the stage, the character in focus plays its Signature clip once, then settles into Idle
+  // (a one-shot clip would otherwise hold its last frame, e.g. Ginza lying flat after his tumble).
+  const showedSignature = useRef(false);
 
   // Stopping the clips also forgets which one was playing, so a remount starts it again.
   // (React's StrictMode remounts every component once in development.)
@@ -147,7 +150,8 @@ export function CharacterModel({ gltf, name, frame, onClip, facesCamera = false 
     const state = frame();
 
     // Clip: cross-fade to the new one; one-shot clips start from the beginning.
-    const wanted = clipFor(state.pose);
+    if (state.pose.pose !== 'focus') showedSignature.current = false;
+    const wanted = showedSignature.current ? 'Idle' : clipFor(state.pose);
     const clip = actions.has(wanted) ? wanted : actions.has('Idle') ? 'Idle' : null;
     if (clip && clip !== current.current) {
       const next = actions.get(clip);
@@ -162,6 +166,10 @@ export function CharacterModel({ gltf, name, frame, onClip, facesCamera = false 
     const run = actions.get('Run');
     if (run) run.timeScale = runPlaybackRate(state.speed);
     if (!state.frozen) mixer.update(frameDt(delta));
+    if (state.pose.pose === 'focus' && current.current === 'Signature') {
+      const signature = actions.get('Signature');
+      if (signature && signature.time >= signature.getClip().duration) showedSignature.current = true;
+    }
 
     // Locked silhouette.
     if (state.dark !== dark.current) {
