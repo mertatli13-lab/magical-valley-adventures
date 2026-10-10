@@ -48,11 +48,11 @@ describe('catalogue', () => {
     }
   });
 
-  it('prices add up to 6,000 + 4,000 + 3,000 = 13,000', () => {
+  it('prices add up to 0 + 4,000 + 3,000 = 7,000 (every character is free)', () => {
     const characters = sum(CHARACTERS.map((c) => c.price));
     const moves = sum(SIGNATURE_MOVES.map((m) => m.price));
     const accessories = sum(ACCESSORIES.map((a) => a.price));
-    expect([characters, moves, accessories]).toEqual([6000, 4000, 3000]);
+    expect([characters, moves, accessories]).toEqual([0, 4000, 3000]);
   });
 
   it('ids are unique', () => {
@@ -62,32 +62,40 @@ describe('catalogue', () => {
 });
 
 describe('buying', () => {
-  it('Strawberry and Ginza are owned from the start', () => {
+  it('every character is owned from the start', () => {
     const session = new Session(new MemoryStorage());
     expect(CHARACTERS.filter((c) => session.isOwned('character', c.id)).map((c) => c.id)).toEqual([
       'strawberry',
       'ginza',
+      'chity',
+      'kusto',
+      'sugar',
     ]);
   });
 
+  it('an older save that bought only some characters gets them all', () => {
+    const save = parseSave(JSON.stringify({ ...defaultSave(), owned: { characters: ['chity'], accessories: [], moves: [] } }));
+    expect(save.owned.characters).toHaveLength(CHARACTERS.length);
+  });
+
   it('cannot buy without enough stars', () => {
-    const session = sessionWith({ totalStars: 499 });
-    expect(session.buy('character', 'chity')).toBe(false);
-    expect(session.isOwned('character', 'chity')).toBe(false);
-    expect(session.save.totalStars).toBe(499);
+    const session = sessionWith({ totalStars: 149 });
+    expect(session.buy('accessory', 'bow')).toBe(false);
+    expect(session.isOwned('accessory', 'bow')).toBe(false);
+    expect(session.save.totalStars).toBe(149);
   });
 
   it('cannot buy twice', () => {
-    const session = sessionWith({ totalStars: 1000 });
-    expect(session.buy('character', 'chity')).toBe(true);
-    expect(session.buy('character', 'chity')).toBe(false);
-    expect(session.save.totalStars).toBe(500);
-    expect(session.save.owned.characters.filter((id) => id === 'chity')).toHaveLength(1);
-    expect(session.buy('character', 'strawberry')).toBe(false); // already owned for free
+    const session = sessionWith({ totalStars: 300 });
+    expect(session.buy('accessory', 'bow')).toBe(true);
+    expect(session.buy('accessory', 'bow')).toBe(false);
+    expect(session.save.totalStars).toBe(150);
+    expect(session.save.owned.accessories.filter((id) => id === 'bow')).toHaveLength(1);
+    expect(session.buy('character', 'sugar')).toBe(false); // already owned for free
+    expect(session.save.totalStars).toBe(150);
   });
 
   it.each([
-    ['character', 'kusto', 1500],
     ['accessory', 'bow', 150],
     ['accessory', 'cape', 300],
     ['accessory', 'glowing-wings', 600],
@@ -99,11 +107,10 @@ describe('buying', () => {
     expect(session.isOwned(kind, id)).toBe(true);
   });
 
-  it('a signature move can only be bought for an owned character', () => {
-    const session = sessionWith({ totalStars: 5000 });
-    expect(session.buy('move', 'victory-punch')).toBe(false); // Chity is locked
-    session.buy('character', 'chity');
-    expect(session.buy('move', 'victory-punch')).toBe(true);
+  it("every character's signature move can be bought from the start", () => {
+    const session = sessionWith({ totalStars: 4000 });
+    for (const move of SIGNATURE_MOVES) expect(session.buy('move', move.id)).toBe(true);
+    expect(session.save.totalStars).toBe(0);
   });
 
   it('refuses unknown items', () => {
@@ -116,7 +123,7 @@ describe('buying', () => {
 describe('equipping', () => {
   it('only owned items can be equipped', () => {
     const session = sessionWith({ totalStars: 0 });
-    expect(session.equipCharacter('sugar')).toBe(false);
+    expect(session.equipCharacter('sugar')).toBe(true); // every character is free
     expect(session.equipAccessory('cape')).toBe(false);
     expect(session.setMoveOn('rainbow-dash', true)).toBe(false);
   });
@@ -140,7 +147,6 @@ describe('equipping', () => {
   it('equip state persists after reload', () => {
     const storage = new MemoryStorage();
     const session = sessionWith({ totalStars: 5000 }, storage);
-    session.buy('character', 'kusto');
     session.equipCharacter('kusto');
     session.buy('accessory', 'wizard-hat');
     session.equipAccessory('wizard-hat');
@@ -151,7 +157,7 @@ describe('equipping', () => {
     expect(reloaded.equippedCharacter.id).toBe('kusto');
     expect(reloaded.equippedAccessory?.id).toBe('wizard-hat');
     expect(reloaded.activeMove?.id).toBe('brave-glide');
-    expect(reloaded.save.totalStars).toBe(5000 - 1500 - 300 - 800);
+    expect(reloaded.save.totalStars).toBe(5000 - 300 - 800);
 
     reloaded.equipAccessory(null);
     expect(new Session(storage).equippedAccessory).toBeUndefined();
@@ -205,20 +211,12 @@ describe('signature moves are cosmetic', () => {
   });
 });
 
-describe('acceptance: buy Chity with 500 stars and choose him on the stage', () => {
+describe('acceptance: choose Chity on the stage with no stars', () => {
   it('works end to end and is remembered', () => {
     const storage = new MemoryStorage();
-    const session = sessionWith({ totalStars: 500 }, storage);
+    const session = sessionWith({ totalStars: 0 }, storage);
     session.play();
     while (session.selectedCharacter.id !== 'chity') session.rotate(1);
-    expect(session.choose()).toBe(false);
-    expect(session.tapLocked()).toBe(true);
-    expect(session.screen).toBe('SHOP');
-    expect(session.buy('character', 'chity')).toBe(true);
-    expect(session.save.totalStars).toBe(0);
-    session.back();
-    expect(session.screen).toBe('SELECT');
-    expect(session.selectedCharacter.id).toBe('chity');
     expect(session.choose()).toBe(true);
     expect(session.screen).toBe('RUN');
     expect(new Session(storage).equippedCharacter.id).toBe('chity');

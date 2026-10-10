@@ -207,16 +207,15 @@ describe('select', () => {
     expect(session.screen).toBe('RUN');
   });
 
-  it('cannot choose a locked character; tapping it opens the shop', () => {
-    const session = new Session(new MemoryStorage());
-    session.play();
-    while (session.owns(session.selectedCharacter)) session.rotate(1);
-    expect(session.choose()).toBe(false);
-    expect(session.screen).toBe('SELECT');
-    expect(session.tapLocked()).toBe(true);
-    expect(session.screen).toBe('SHOP');
-    session.back();
-    expect(session.screen).toBe('SELECT');
+  it('every character can be chosen from the start', () => {
+    for (let i = 0; i < CHARACTERS.length; i++) {
+      const session = new Session(new MemoryStorage());
+      session.play();
+      session.rotate(i);
+      expect(session.owns(session.selectedCharacter)).toBe(true);
+      expect(session.choose()).toBe(true);
+      expect(session.screen).toBe('RUN');
+    }
   });
 
   it('turns the stage around all five characters in both directions', () => {
@@ -263,7 +262,7 @@ describe('save (A8)', () => {
       version: 1,
       totalStars: 0,
       bestRun: 0,
-      owned: { characters: ['strawberry', 'ginza'], accessories: [], moves: [] },
+      owned: { characters: ['strawberry', 'ginza', 'chity', 'kusto', 'sugar'], accessories: [], moves: [] },
       equipped: { character: 'strawberry', accessory: null, moves: {} },
       settings: { music: true, sound: true, reduceMotion: false },
     });
@@ -315,13 +314,13 @@ describe('save (A8)', () => {
     const save = parseSave(
       JSON.stringify({ ...defaultSave(), owned: { characters: ['kusto', 'dragon'], accessories: [], moves: [] } }),
     );
-    expect(save.owned.characters.sort()).toEqual(['ginza', 'kusto', 'strawberry']);
+    expect(save.owned.characters.sort()).toEqual(['chity', 'ginza', 'kusto', 'strawberry', 'sugar']);
   });
 
-  it('falls back to the default character if the equipped one is not owned', () => {
-    const save = parseSave(
-      JSON.stringify({ ...defaultSave(), equipped: { character: 'sugar', accessory: null, moves: {} } }),
-    );
-    expect(save.equipped.character).toBe('strawberry');
+  it('keeps any equipped character, and falls back to the default for an unknown one', () => {
+    const sugar = parseSave(JSON.stringify({ ...defaultSave(), equipped: { character: 'sugar', accessory: null, moves: {} } }));
+    expect(sugar.equipped.character).toBe('sugar');
+    const unknown = parseSave(JSON.stringify({ ...defaultSave(), equipped: { character: 'dragon', accessory: null, moves: {} } }));
+    expect(unknown.equipped.character).toBe('strawberry');
   });
 });

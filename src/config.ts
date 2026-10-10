@@ -172,13 +172,13 @@ export const ECONOMY = {
   STARS_EARNED_PER_MINUTE: 120,
 } as const;
 
-/** Character prices in stars. 0 = free and owned from the start. */
+/** Character prices in stars. 0 = free and owned from the start: every character is (Mert, Oct 2026). */
 export const CHARACTER_PRICES = {
   strawberry: 0,
   ginza: 0,
-  chity: 500,
-  kusto: 1500,
-  sugar: 4000,
+  chity: 0,
+  kusto: 0,
+  sugar: 0,
 } as const;
 
 /** Display names, in stage order. */
