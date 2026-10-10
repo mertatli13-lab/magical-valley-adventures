@@ -6,8 +6,7 @@ Use MP3: it plays everywhere, including older iPad Safari.
 
 | File | When it plays |
 |---|---|
-| `music-menu.mp3` | Looping music on the Landing, Select, Results and Shop screens |
-| `music-run.mp3` | Looping music during a run (quieter while paused) |
+| `music-sugar-dash.mp3` | "Sugar Dash", the game's song. It loops through every screen without restarting, from the first tap (quieter while paused). Streamed, not decoded whole. |
 | `swipe.mp3` | Lane change |
 | `jump.mp3` | Jump |
 | `slide.mp3` | Slide |

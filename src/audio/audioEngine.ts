@@ -6,9 +6,11 @@ type AudioContextClass = typeof AudioContext;
 /**
  * Web Audio playback. Browsers (iPad Safari above all) only allow sound after
  * a tap, so no AudioContext exists until unlock() is called from a user
- * gesture: nothing can play before the first tap. Files are fetched at
- * startup and decoded after unlocking; a missing file is silent, with a
- * warning in the console.
+ * gesture: nothing can play before the first tap. Sound effects are fetched
+ * at startup and decoded after unlocking. Music streams from an <audio>
+ * element through Web Audio instead of being decoded whole (a 3-minute song
+ * would take about 65 MB of memory), and starts on the first tap. A missing
+ * file is silent, with a warning in the console.
  */
 class AudioEngine {
   private context: AudioContext | null = null;
@@ -16,7 +18,8 @@ class AudioEngine {
   private soundGain: GainNode | null = null;
   private readonly fetched = new Map<string, Promise<ArrayBuffer | null>>();
   private readonly buffers = new Map<string, AudioBuffer | null>();
-  private readonly trackGains = new Map<Track, GainNode>();
+  /** One streaming element per music file: tracks that share a file share one song, so it never restarts. */
+  private readonly music = new Map<string, { element: HTMLAudioElement; gain: GainNode }>();
   private musicOn = true;
   private soundOn = true;
   private track: Track = 'menu';
@@ -24,11 +27,7 @@ class AudioEngine {
   /** Sounds played, for tests in development. */
   played = 0;
 
-  /**
-   * Starts downloading files (no sound is made). Sound effects download at
-   * startup; the larger music files only after the first tap, to keep the
-   * first load small.
-   */
+  /** Starts downloading sound effects (no sound is made). Music streams only after the first tap. */
   prefetch(paths: readonly string[] = Object.values(SOUND_FILES)): void {
     for (const path of paths) {
       if (this.fetched.has(path)) continue;
@@ -58,6 +57,8 @@ class AudioEngine {
   unlock(): void {
     if (this.context) {
       if (this.context.state === 'suspended' && !document.hidden) void this.context.resume().catch(() => {});
+      // A later tap retries music the browser refused to start.
+      for (const { element } of this.music.values()) if (element.paused && !document.hidden) void element.play().catch(() => {});
       return;
     }
     const Context: AudioContextClass | undefined =
@@ -77,7 +78,7 @@ class AudioEngine {
     silence.start();
     void context.resume().catch(() => {});
     this.prefetch();
-    this.prefetch(Object.values(MUSIC_FILES));
+    this.startMusic();
     void this.decodeAll();
   }
 
@@ -100,25 +101,29 @@ class AudioEngine {
         }
       }),
     );
-    this.startMusic();
   }
 
-  /** Both tracks loop from the start; only the current one is audible. */
+  /**
+   * Starts every music file looping, inside the unlocking gesture (play() must be
+   * called from a tap on iPad Safari). Only the current track's file is audible.
+   */
   private startMusic(): void {
     const context = this.context;
     if (!context || !this.musicGain) return;
-    for (const track of Object.keys(MUSIC_FILES) as Track[]) {
-      const buffer = this.buffers.get(MUSIC_FILES[track]);
-      if (!buffer || this.trackGains.has(track)) continue;
+    for (const path of new Set(Object.values(MUSIC_FILES))) {
+      if (this.music.has(path)) continue;
+      const element = new Audio(`${import.meta.env.BASE_URL}${path}`);
+      element.loop = true;
+      element.preload = 'auto';
+      element.addEventListener('error', () => console.warn(`[audio] ${path} is missing or unreadable; it will be silent.`), {
+        once: true,
+      });
       const gain = context.createGain();
       gain.gain.value = 0;
+      context.createMediaElementSource(element).connect(gain);
       gain.connect(this.musicGain);
-      const source = context.createBufferSource();
-      source.buffer = buffer;
-      source.loop = true;
-      source.connect(gain);
-      source.start();
-      this.trackGains.set(track, gain);
+      this.music.set(path, { element, gain });
+      void element.play().catch(() => {});
     }
     this.applyVolumes(AUDIO.MUSIC_FADE);
   }
@@ -134,8 +139,9 @@ class AudioEngine {
     };
     ramp(this.musicGain.gain, this.musicOn ? AUDIO.MUSIC_VOLUME : 0);
     ramp(this.soundGain.gain, this.soundOn ? AUDIO.SOUND_VOLUME : 0);
-    for (const [track, gain] of this.trackGains) {
-      ramp(gain.gain, track === this.track ? (this.paused ? AUDIO.PAUSED_MUSIC_FACTOR : 1) : 0);
+    const current = MUSIC_FILES[this.track];
+    for (const [path, { gain }] of this.music) {
+      ramp(gain.gain, path === current ? (this.paused ? AUDIO.PAUSED_MUSIC_FACTOR : 1) : 0);
     }
   }
 
@@ -163,13 +169,16 @@ class AudioEngine {
     this.applyVolumes(AUDIO.MUSIC_FADE);
   }
 
-  /** Silences everything while the tab is hidden. */
+  /** Silences everything while the tab is hidden; the music pauses where it is. */
   suspend(): void {
+    for (const { element } of this.music.values()) element.pause();
     void this.context?.suspend().catch(() => {});
   }
 
   resume(): void {
-    if (this.context && !document.hidden) void this.context.resume().catch(() => {});
+    if (!this.context || document.hidden) return;
+    void this.context.resume().catch(() => {});
+    for (const { element } of this.music.values()) void element.play().catch(() => {});
   }
 }
 
