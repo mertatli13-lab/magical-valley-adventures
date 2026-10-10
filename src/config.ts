@@ -610,6 +610,11 @@ export const MODEL_FITS: Readonly<Record<string, { fit: AccessoryFit; points: Re
     fit: { head: 0.17, neck: 0.09, eyes: 0.12, face: 0.15, shoulders: 0.16, body: 0.62 },
     points: { acc_head: [0, 0.06, -0.1], acc_neck: [0, 0.03, -0.06], acc_back: [0, -0.03, 0.07] },
   },
+  /** Ginza has acc_* empties from scripts/rig-quadruped.py, so only his fit is used: a big head on a short neck. */
+  ginza: {
+    fit: { head: 0.2, neck: 0.12, eyes: 0.15, face: 0.2, shoulders: 0.17, body: 0.55 },
+    points: { acc_head: [0, 0.08, 0], acc_neck: [0, 0.04, -0.04], acc_back: [0, 0, 0] },
+  },
 };
 
 /** Where each attach point sits on the capsule, as a share of the hero's current height. */
